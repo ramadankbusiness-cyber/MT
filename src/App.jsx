@@ -23,20 +23,20 @@ import {
 import { getDiagnostics } from "./utils/notificationPermissionManager";
 import { fetchUnreadCount } from "./services/notificationInbox";
 
-const Home = lazy(() => import("./pages/Home"));
-const Events = lazy(() => import("./pages/Events"));
-const EventDetails = lazy(() => import("./pages/EventDetails"));
-const Profile = lazy(() => import("./pages/Profile"));
-const TeamPage = lazy(() => import("./pages/Team"));
-const Gallery = lazy(() => import("./pages/Gallery"));
-const Achievements = lazy(() => import("./pages/Achievements"));
-const AdminPanel = lazy(() => import("./pages/AdminPanel"));
-const AdminAccounts = lazy(() => import("./pages/AdminAccounts"));
-const QRCodePage = lazy(() => import("./pages/QRCode"));
-const Attendance = lazy(() => import("./pages/Attendance"));
-const ScanAttendance = lazy(() => import("./pages/scanAttendance"));
+const Home = lazy(() => import("./pages-legacy/Home"));
+const Events = lazy(() => import("./pages-legacy/Events"));
+const EventDetails = lazy(() => import("./pages-legacy/EventDetails"));
+const Profile = lazy(() => import("./pages-legacy/Profile"));
+const TeamPage = lazy(() => import("./pages-legacy/Team"));
+const Gallery = lazy(() => import("./pages-legacy/Gallery"));
+const Achievements = lazy(() => import("./pages-legacy/Achievements"));
+const AdminPanel = lazy(() => import("./pages-legacy/AdminPanel"));
+const AdminAccounts = lazy(() => import("./pages-legacy/AdminAccounts"));
+const QRCodePage = lazy(() => import("./pages-legacy/QRCode"));
+const Attendance = lazy(() => import("./pages-legacy/Attendance"));
+const ScanAttendance = lazy(() => import("./pages-legacy/scanAttendance"));
 const AuthModal = lazy(() => import("./components/authmodal"));
-const Alerts = lazy(() => import("./pages/Alerts"));
+const Alerts = lazy(() => import("./pages-legacy/Alerts"));
 
 function AppFallback() {
   return (

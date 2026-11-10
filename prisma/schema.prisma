@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  LEADER
+  MEMBER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+enum AttendanceAttemptStatus {
+  REJECTED
+  SUSPICIOUS
+}
+
+enum QrMode {
+  ROTATING
+  STATIC
+}
+
+enum ExcuseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  ANNOUNCEMENT
+  NEW_EVENT
+  EVENT_REMINDER
+  SESSION_OPENED
+  ATTENDANCE_CONFIRMED
+  ATTENDANCE_REJECTED
+  ABSENCE_WARNING
+  ACCOUNT_CREATED
+  PASSWORD_CHANGED
+  ROLE_CHANGED
+  EXCUSE_DECISION
+}
+
+enum NotificationAudience {
+  EVERYONE
+  ROLE
+  COMMITTEE
+  USERS
+}
+
+model Committee {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  team      TeamMember[]
+  events    Event[]
+  sessions  AttendanceSession[]
+  zones     Zone[]
+  notifications Notification[]
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  role               Role     @default(MEMBER)
+  committeeId        String?
+  isActive           Boolean  @default(true)
+  mustChangePassword Boolean  @default(true)
+  sessionVersion     Int      @default(0)
+  phone              String?
+  photoUrl           String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  committee          Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  teamEntries        TeamMember[]
+  attendance         AttendanceRecord[]
+  attempts           AttendanceAttempt[]
+  excuses            Excuse[] @relation("ExcuseRequester")
+  reviewedExcuses    Excuse[] @relation("ExcuseReviewer")
+  authoredEvents     Event[] @relation("EventAuthor")
+  authoredNotifications Notification[] @relation("NotificationAuthor")
+  notificationRecipients NotificationRecipient[]
+  pushSubscriptions  PushSubscription[]
+  notificationPreferences NotificationPreference[]
+  auditLogs          AuditLog[] @relation("AuditActor")
+  passwordResetTokens PasswordResetToken[]
+
+  @@index([committeeId, role, isActive])
+}
+
+model TeamMember {
+  id          String    @id @default(cuid())
+  name        String
+  title       String
+  committeeId String
+  bio         String?   @db.VarChar(500)
+  socialLinks Json?
+  photoUrl    String?
+  order       Int       @default(0)
+  visible     Boolean   @default(true)
+  userId      String?   @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  committee   Committee @relation(fields: [committeeId], references: [id], onDelete: Restrict)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([visible, order])
+  @@index([committeeId])
+}
+
+model Zone {
+  id          String   @id @default(cuid())
+  name        String
+  latitude    Float
+  longitude   Float
+  radiusMeters Int
+  committeeId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  committee   Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  sessions    AttendanceSession[]
+
+  @@index([committeeId])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.VarChar(2000)
+  startsAt    DateTime
+  endsAt      DateTime?
+  location    String?
+  committeeId String?
+  createdById String
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  committee   Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  createdBy   User     @relation("EventAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([published, startsAt])
+  @@index([committeeId, startsAt])
+}
+
+model AttendanceSession {
+  id                String   @id @default(cuid())
+  title             String
+  committeeId       String?
+  zoneId            String
+  startsAt          DateTime
+  endsAt            DateTime
+  lateAfterMinutes  Int      @default(10)
+  qrMode            QrMode   @default(ROTATING)
+  createdById       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  committee         Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  zone              Zone     @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  records           AttendanceRecord[]
+  attempts          AttendanceAttempt[]
+  qrTokens          QrToken[]
+  excuses           Excuse[]
+
+  @@index([startsAt, endsAt])
+  @@index([committeeId, startsAt])
+}
+
+model AttendanceRecord {
+  id            String           @id @default(cuid())
+  userId        String
+  sessionId     String
+  status        AttendanceStatus
+  checkedInAt   DateTime?
+  distanceMeters Float?
+  accuracyMeters Float?
+  reason        String?          @db.VarChar(500)
+  markedById    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session       AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@index([sessionId, status])
+  @@index([userId, checkedInAt])
+}
+
+model AttendanceAttempt {
+  id             String                  @id @default(cuid())
+  userId         String?
+  sessionId      String
+  status         AttendanceAttemptStatus
+  reason         String                  @db.VarChar(500)
+  distanceMeters Float?
+  accuracyMeters Float?
+  deviceHash     String?
+  ipHash         String?
+  userAgent      String?                 @db.VarChar(500)
+  createdAt      DateTime                @default(now())
+  user           User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  session        AttendanceSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([deviceHash, createdAt])
+}
+
+model QrToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  sessionId String
+  expiresAt DateTime
+  static    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, expiresAt])
+}
+
+model Excuse {
+  id          String       @id @default(cuid())
+  userId      String
+  sessionId   String
+  reason      String       @db.VarChar(1000)
+  status      ExcuseStatus @default(PENDING)
+  reviewerId  String?
+  reviewedAt  DateTime?
+  reviewNote  String?      @db.VarChar(500)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation("ExcuseRequester", fields: [userId], references: [id], onDelete: Cascade)
+  session     AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reviewer    User?        @relation("ExcuseReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, sessionId])
+  @@index([sessionId, status])
+}
+
+model Notification {
+  id          String               @id @default(cuid())
+  title       String
+  message     String               @db.VarChar(3000)
+  link        String?
+  type        NotificationType
+  audience    NotificationAudience
+  audienceRole Role?
+  committeeId String?
+  important   Boolean              @default(false)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdById String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  createdBy   User                 @relation("NotificationAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  committee   Committee?           @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  recipients  NotificationRecipient[]
+
+  @@index([scheduledAt, sentAt])
+  @@index([createdAt])
+}
+
+model NotificationRecipient {
+  id             String       @id @default(cuid())
+  notificationId String
+  userId         String
+  readAt         DateTime?
+  deliveredAt    DateTime?
+  pushSentAt     DateTime?
+  pushAttempts   Int          @default(0)
+  createdAt      DateTime     @default(now())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+  @@index([userId, readAt, createdAt])
+  @@index([pushSentAt, pushAttempts])
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique @db.VarChar(2048)
+  p256dh     String
+  auth       String
+  userAgent  String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NotificationPreference {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  inApp     Boolean          @default(true)
+  push      Boolean          @default(true)
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  details    Json?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ipHash    String
+  succeeded Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipHash, createdAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}

@@ -2,10 +2,26 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import nextPlugin from '@next/eslint-plugin-next'
+import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'android/**', 'ios/**', 'tests/**', 'backend/**']),
+  globalIgnores(['dist', 'android/**', 'ios/**', 'tests/**', 'backend/**', 'src/**/*.{js,jsx}']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [...tseslint.configs.recommended],
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
+  },
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    plugins: { '@next/next': nextPlugin },
+    rules: nextPlugin.configs.recommended.rules,
+  },
   {
     files: ['**/*.{js,jsx}'],
     extends: [

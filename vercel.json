@@ -7,17 +7,16 @@
     },
     {
       "src": "package.json",
-      "use": "@vercel/static-build"
+      "use": "@vercel/next"
     }
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/((?!join(?:/|$)|auth(?:/|$)|admin(?:/|$)|team(?:/|$)|profile(?:/|$)|events(?:/|$)|attendance(?:/|$)|excuses(?:/|$)|notifications(?:/|$)|push(?:/|$)|cron(?:/|$)).*)",
       "destination": "backend/server.js"
-    },
-    {
-      "source": "/((?!api/|_next/|.*\\..*).*)",
-      "destination": "/index.html"
     }
+  ],
+  "crons": [
+    { "path": "/api/cron/notifications", "schedule": "* * * * *" }
   ]
 }

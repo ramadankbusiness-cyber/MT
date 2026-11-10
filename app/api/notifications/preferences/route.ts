@@ -1,0 +1,32 @@
+import { NextResponse } from "next/server";
+import { NotificationType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/auth-guards";
+import { notificationPreferenceSchema } from "@/lib/schemas";
+
+export async function GET() {
+  const access = await requirePermission("notifications.manage.own");
+  if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
+  const saved = await prisma.notificationPreference.findMany({ where: { userId: access.user.id } });
+  return NextResponse.json({
+    preferences: Object.values(NotificationType).map((type) => ({
+      type,
+      inApp: saved.find((item) => item.type === type)?.inApp ?? true,
+      push: saved.find((item) => item.type === type)?.push ?? true,
+    })),
+  });
+}
+
+export async function PATCH(request: Request) {
+  const access = await requirePermission("notifications.manage.own");
+  if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
+  const body: unknown = await request.json().catch(() => null);
+  const parsed = notificationPreferenceSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Check your notification preferences." }, { status: 400 });
+  const preference = await prisma.notificationPreference.upsert({
+    where: { userId_type: { userId: access.user.id, type: parsed.data.type } },
+    create: { userId: access.user.id, ...parsed.data },
+    update: { inApp: parsed.data.inApp, push: parsed.data.push },
+  });
+  return NextResponse.json({ preference });
+}
