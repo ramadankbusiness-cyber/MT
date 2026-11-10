@@ -2,11 +2,19 @@ import { AttendanceTools, type AttendanceSessionView } from "@/components/attend
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-guards";
 import { listClubCommittees } from "@/lib/committees";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Attendance" };
+type Props = { params: Promise<{ locale: string }> };
 
-export default async function AttendancePage() {
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  return { title: locale === "ar" ? "الحضور" : "Attendance" };
+}
+
+export default async function AttendancePage({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "site.pages.attendance" });
   const user = await requireUser();
   const now = new Date();
   if (user.role === "MEMBER") {
@@ -23,7 +31,7 @@ export default async function AttendancePage() {
     return (
       <main id="main-content" className="inner-page">
         <section className="content-section page-intro">
-          <div className="section-heading"><p className="eyebrow">MEMBER AREA</p><h1>Attendance</h1><p className="section-lead">Check in to a session and follow your attendance history.</p></div>
+          <div className="section-heading"><p className="eyebrow">{t("memberEyebrow")}</p><h1>{t("title")}</h1><p className="section-lead">{t("memberLead")}</p></div>
           <AttendanceTools role="MEMBER" initialSessions={[]} zones={[]} committees={[]} members={[]} records={records.map((record) => ({ ...record, checkedInAt: record.checkedInAt?.toISOString() ?? null }))} attendanceRate={sessions ? Math.round(attended / sessions * 100) : 0} />
         </section>
       </main>
@@ -57,7 +65,7 @@ export default async function AttendancePage() {
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
-        <div className="section-heading"><p className="eyebrow">{user.role} AREA</p><h1>Attendance sessions</h1><p className="section-lead">Manage check-in windows and display session QR codes.</p></div>
+        <div className="section-heading"><p className="eyebrow">{user.role === "ADMIN" ? "ADMIN" : "LEADER"} · {t("eyebrow")}</p><h1>{t("sessionsTitle")}</h1><p className="section-lead">{t("lead")}</p></div>
         <AttendanceTools role={user.role} initialSessions={sessionViews} zones={zones} committees={committees} members={members} records={[]} attendanceRate={0} />
       </section>
     </main>

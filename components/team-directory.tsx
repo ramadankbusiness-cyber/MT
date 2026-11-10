@@ -3,10 +3,13 @@
 import Image from "next/image";
 import { SectionHeading } from "@/components/section-heading";
 import { useSite } from "@/components/site-provider";
+import { useTranslations } from "next-intl";
+import { getCommitteeLabel } from "@/data/committees";
 import type { ManagedTeamMember } from "@/components/team-manager";
 
 export function TeamDirectory({ members }: { members: ManagedTeamMember[] }) {
   const { language, text } = useSite();
+  const pages = useTranslations("site.pages.team");
   return (
     <>
       <SectionHeading eyebrow={text.team.eyebrow} title={text.team.title} lead={text.team.lead} />
@@ -20,16 +23,16 @@ export function TeamDirectory({ members }: { members: ManagedTeamMember[] }) {
           <div className="team-card-copy">
             <p className="team-role">{language === "ar" ? member.titleAr ?? member.title : member.title}</p>
             <h2>{member.name}</h2>
-            <p className="team-committee">{member.committee.name}</p>
+            <p className="team-committee">{getCommitteeLabel(member.committee.name, language)}</p>
             {(language === "ar" ? member.bioAr ?? member.bio : member.bio) && <p>{language === "ar" ? member.bioAr ?? member.bio : member.bio}</p>}
             {member.socialLinks && <div className="team-socials">
-              {member.socialLinks.website && <a href={member.socialLinks.website} target="_blank" rel="noreferrer">Website</a>}
-              {member.socialLinks.linkedin && <a href={member.socialLinks.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>}
-              {member.socialLinks.instagram && <a href={member.socialLinks.instagram} target="_blank" rel="noreferrer">Instagram</a>}
+              {member.socialLinks.website && <a href={member.socialLinks.website} target="_blank" rel="noreferrer">{pages("website")}</a>}
+              {member.socialLinks.linkedin && <a href={member.socialLinks.linkedin} target="_blank" rel="noreferrer">{pages("linkedin")}</a>}
+              {member.socialLinks.instagram && <a href={member.socialLinks.instagram} target="_blank" rel="noreferrer">{pages("instagram")}</a>}
             </div>}
           </div>
         </article>
-      ))}</div> : <p className="empty-note">{language === "ar" ? "يجري تحديث الفريق. يرجى العودة قريبًا." : "Our team is being updated. Please check back soon."}</p>}
+      ))}</div> : <p className="empty-note">{pages("empty")}</p>}
     </>
   );
 }

@@ -18,6 +18,7 @@ export async function getCurrentUser() {
       mustChangePassword: true,
       phone: true,
       photoUrl: true,
+      preferredLanguage: true,
     },
   });
 }

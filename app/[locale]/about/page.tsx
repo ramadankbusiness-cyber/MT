@@ -1,6 +1,6 @@
 "use client";
 
-import { PrincipleCards } from "@/components/home-sections";
+import { AboutCommittees } from "@/components/about-committees";
 import { SectionHeading } from "@/components/section-heading";
 import { useSite } from "@/components/site-provider";
 
@@ -10,7 +10,7 @@ export default function AboutPage() {
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
         <SectionHeading eyebrow={text.about.eyebrow} title={text.about.title} lead={text.about.lead} gradientLastWord />
-        <PrincipleCards />
+        <AboutCommittees />
       </section>
     </main>
   );

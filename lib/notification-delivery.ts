@@ -13,7 +13,7 @@ export async function dispatchPushNotification(notificationId: string) {
 
   const notification = await prisma.notification.findUnique({
     where: { id: notificationId },
-    select: { id: true, title: true, message: true, link: true, type: true },
+    select: { id: true, title: true, titleAr: true, message: true, messageAr: true, link: true, type: true },
   });
   if (!notification) return { configured: true, sent: 0 };
   const recipients = await prisma.notificationRecipient.findMany({
@@ -22,6 +22,7 @@ export async function dispatchPushNotification(notificationId: string) {
       user: {
         select: {
           pushSubscriptions: true,
+          preferredLanguage: true,
           notificationPreferences: { where: { type: notification.type }, select: { push: true } },
         },
       },
@@ -44,7 +45,12 @@ export async function dispatchPushNotification(notificationId: string) {
       try {
         await sendNotification(
           { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
-          JSON.stringify({ title: notification.title, body: notification.message, url: notification.link ?? "/notifications", tag: notification.id }),
+          JSON.stringify({
+            title: recipient.user.preferredLanguage === "ar" ? notification.titleAr || notification.title : notification.title,
+            body: recipient.user.preferredLanguage === "ar" ? notification.messageAr || notification.message : notification.message,
+            url: notification.link ?? "/notifications",
+            tag: notification.id,
+          }),
         );
         delivered = true;
       } catch (error) {
@@ -92,7 +98,9 @@ export async function dispatchDueNotifications(now = new Date()) {
 
 export async function createImmediateNotification(input: {
   title: string;
+  titleAr?: string | null;
   message: string;
+  messageAr?: string | null;
   link: string;
   type: NotificationType;
   audience: "EVERYONE" | "COMMITTEE" | "USERS";
@@ -146,7 +154,7 @@ export async function dispatchOperationalReminders(now = new Date()) {
         published: true,
         startsAt: { gt: new Date(threshold - 2 * 60_000), lte: new Date(threshold) },
       },
-      select: { id: true, title: true, startsAt: true, committeeId: true, createdById: true },
+      select: { id: true, title: true, titleAr: true, startsAt: true, committeeId: true, createdById: true },
     });
     for (const event of events) {
       const link = `/events?event=${encodeURIComponent(event.id)}&reminder=${reminder.hours}h`;
@@ -164,7 +172,9 @@ export async function dispatchOperationalReminders(now = new Date()) {
         const createdNotification = await transaction.notification.create({
           data: {
             title: `${reminder.label}: ${event.title}`,
+            titleAr: `تذكير: ${event.titleAr || event.title}`,
             message: `“${event.title}” starts ${reminder.hours === 1 ? "in one hour" : "in 24 hours"}.`,
+            messageAr: `يبدأ موعد "${event.titleAr || event.title}" ${reminder.hours === 1 ? "بعد ساعة" : "خلال 24 ساعة"}.`,
             link,
             type: "EVENT_REMINDER",
             audience: event.committeeId ? "COMMITTEE" : "EVERYONE",

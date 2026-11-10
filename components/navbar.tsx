@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
@@ -27,11 +26,11 @@ export function Navbar() {
   return (
     <header className="site-header">
       <div className="nav-inner">
-        <Link className="brand" href="/" aria-label="MT Club home" onClick={() => setMenuOpen(false)}>
+        <Link className="brand" href="/" aria-label={text.nav.homeLabel} onClick={() => setMenuOpen(false)}>
           <Image src="/mt-logo.png" alt="" width={38} height={38} priority />
           <span>MT Club</span>
         </Link>
-        <nav id="site-navigation" className={`main-nav${menuOpen ? " is-open" : ""}`} aria-label="Main navigation">
+        <nav id="site-navigation" className={`main-nav${menuOpen ? " is-open" : ""}`} aria-label={language === "ar" ? "التنقل الرئيسي" : "Main navigation"}>
           {links.map(({ href, key }) => (
             <Link
               key={href}
@@ -43,9 +42,12 @@ export function Navbar() {
               {text.nav[key]}
             </Link>
           ))}
+          <button className="icon-button language-button language-mobile" type="button" onClick={toggleLanguage} aria-label={text.nav.switchTo}>
+            {text.nav.language}
+          </button>
         </nav>
         <div className="nav-actions">
-          <button className="icon-button language-button" type="button" onClick={toggleLanguage} aria-label={`Switch language to ${language === "en" ? "Arabic" : "English"}`}>
+          <button className="icon-button language-button language-desktop" type="button" onClick={toggleLanguage} aria-label={text.nav.switchTo}>
             {text.nav.language}
           </button>
           <button className="icon-button theme-button" type="button" onClick={toggleTheme} aria-label={text.nav.theme}>
@@ -54,31 +56,31 @@ export function Navbar() {
           {session?.user ? (
             <div className="account-actions">
               <NotificationBell />
-              <button className="avatar-button" type="button" aria-expanded={accountMenuOpen} aria-label="Account menu" onClick={() => setAccountMenuOpen((open) => !open)}>
+              <button className="avatar-button" type="button" aria-expanded={accountMenuOpen} aria-label={text.nav.account} onClick={() => setAccountMenuOpen((open) => !open)}>
                 {session.user.image ? <Image src={session.user.image} alt="" width={34} height={34} /> : <span>{session.user.name?.slice(0, 1).toUpperCase() ?? "M"}</span>}
               </button>
               {accountMenuOpen && (
                 <div className="account-menu">
                   <p>{session.user.name}</p>
-                  <Link href="/dashboard" onClick={() => setAccountMenuOpen(false)}>Dashboard</Link>
-                  <Link href="/attendance" onClick={() => setAccountMenuOpen(false)}>Attendance</Link>
-                  {(session.user.role === "ADMIN" || session.user.role === "LEADER") && <Link href="/admin/reports" onClick={() => setAccountMenuOpen(false)}>Attendance reports</Link>}
-                  <Link href="/excuses" onClick={() => setAccountMenuOpen(false)}>Excuse requests</Link>
-                  <Link href="/profile" onClick={() => setAccountMenuOpen(false)}>My profile</Link>
-                  <Link href="/notifications" onClick={() => setAccountMenuOpen(false)}>Notifications</Link>
-                  {(session.user.role === "ADMIN" || session.user.role === "LEADER") && <Link href="/admin/notifications" onClick={() => setAccountMenuOpen(false)}>Send notifications</Link>}
+                  <Link href="/dashboard" onClick={() => setAccountMenuOpen(false)}>{text.nav.dashboard}</Link>
+                  <Link href="/attendance" onClick={() => setAccountMenuOpen(false)}>{text.nav.attendance}</Link>
+                  {(session.user.role === "ADMIN" || session.user.role === "LEADER") && <Link href="/admin/reports" onClick={() => setAccountMenuOpen(false)}>{text.nav.attendanceReports}</Link>}
+                  <Link href="/excuses" onClick={() => setAccountMenuOpen(false)}>{text.nav.excuses}</Link>
+                  <Link href="/profile" onClick={() => setAccountMenuOpen(false)}>{text.nav.profile}</Link>
+                  <Link href="/notifications" onClick={() => setAccountMenuOpen(false)}>{text.nav.notifications}</Link>
+                  {(session.user.role === "ADMIN" || session.user.role === "LEADER") && <Link href="/admin/notifications" onClick={() => setAccountMenuOpen(false)}>{text.nav.sendNotifications}</Link>}
                   {session.user.role === "ADMIN" && <>
-                    <Link href="/admin/applications" onClick={() => setAccountMenuOpen(false)}>Membership applications</Link>
-                    <Link href="/admin/users" onClick={() => setAccountMenuOpen(false)}>Manage accounts</Link>
-                    <Link href="/admin/events" onClick={() => setAccountMenuOpen(false)}>Manage events</Link>
-                    <Link href="/admin/zones" onClick={() => setAccountMenuOpen(false)}>Attendance zones</Link>
-                    <Link href="/admin/audit" onClick={() => setAccountMenuOpen(false)}>Audit log</Link>
+                    <Link href="/admin/applications" onClick={() => setAccountMenuOpen(false)}>{text.nav.applications}</Link>
+                    <Link href="/admin/users" onClick={() => setAccountMenuOpen(false)}>{text.nav.manageAccounts}</Link>
+                    <Link href="/admin/events" onClick={() => setAccountMenuOpen(false)}>{text.nav.manageEvents}</Link>
+                    <Link href="/admin/zones" onClick={() => setAccountMenuOpen(false)}>{text.nav.zones}</Link>
+                    <Link href="/admin/audit" onClick={() => setAccountMenuOpen(false)}>{text.nav.audit}</Link>
                   </>}
-                  <button type="button" onClick={() => signOut({ callbackUrl: "/" })}>Log out</button>
+                  <button type="button" onClick={() => signOut({ callbackUrl: `/${language}` })}>{text.nav.logout}</button>
                 </div>
               )}
             </div>
-          ) : <Link className="button button-secondary login-button" href="/login">Log in</Link>}
+          ) : <Link className="button button-secondary login-button" href="/login">{text.nav.login}</Link>}
           {!session?.user && <Link className="button button-primary nav-join" href="/join">{text.nav.joinUs}<span aria-hidden="true">↗</span></Link>}
           <button className="icon-button menu-button" type="button" aria-label={text.nav.menu} aria-controls="site-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}

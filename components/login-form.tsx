@@ -1,12 +1,14 @@
 "use client";
 
 import { signIn, getSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { FormEvent, useState } from "react";
 import { Eye, EyeOff, KeyRound, Mail, LoaderCircle } from "lucide-react";
 import { loginSchema } from "@/lib/schemas";
 import { getPostLoginPath, safeReturnPath } from "@/lib/login";
 import { useAppToast } from "@/components/app-toast-provider";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 type LoginFormProps = { callbackUrl: string | null };
 type FieldErrors = { email?: string; password?: string };
@@ -14,6 +16,7 @@ type FieldErrors = { email?: string; password?: string };
 export function LoginForm({ callbackUrl }: LoginFormProps) {
   const router = useRouter();
   const showToast = useAppToast();
+  const t = useTranslations("site.login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -27,7 +30,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
     const nextErrors: FieldErrors = {};
     for (const issue of parsed.error?.issues ?? []) {
       const field = issue.path[0];
-      if ((field === "email" || field === "password") && !nextErrors[field]) nextErrors[field] = field === "email" ? "Enter a valid email address." : "Enter your password.";
+      if ((field === "email" || field === "password") && !nextErrors[field]) nextErrors[field] = field === "email" ? t("invalidEmail") : t("enterPassword");
     }
     setErrors(nextErrors);
     return parsed.success;
@@ -51,11 +54,11 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       if (!result?.ok) {
         const code = result?.code ?? "";
         let errorMessage: string;
-        if (code === "account-disabled") errorMessage = "Your account is disabled, contact the admin.";
+        if (code === "account-disabled") errorMessage = t("disabled");
         else if (code.startsWith("try-again-")) {
           const minutes = Number(code.slice("try-again-".length));
-          errorMessage = `Try again in ${Number.isFinite(minutes) && minutes > 0 ? minutes : 15} minutes.`;
-        } else errorMessage = "Incorrect email or password";
+          errorMessage = t("tryAgain", { minutes: Number.isFinite(minutes) && minutes > 0 ? minutes : 15 });
+        } else errorMessage = t("incorrect");
         setMessage(errorMessage);
         showToast(errorMessage);
         return;
@@ -65,7 +68,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       router.replace(getPostLoginPath(session?.user.mustChangePassword ?? false, safeCallback));
       router.refresh();
     } catch {
-      const errorMessage = "We couldn’t log you in right now. Please try again.";
+      const errorMessage = t("failure");
       setMessage(errorMessage);
       showToast(errorMessage);
     } finally {
@@ -76,7 +79,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
   return (
     <form className="login-form" onSubmit={submit} noValidate>
       <div className="login-field">
-        <label htmlFor="login-email">Email</label>
+        <label htmlFor="login-email">{t("email")}</label>
         <div className={`login-input-wrap${errors.email ? " has-error" : ""}`}>
           <Mail size={18} aria-hidden="true" />
           <input
@@ -94,7 +97,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
               if (errors.email) setErrors((current) => ({ ...current, email: undefined }));
             }}
             onBlur={() => {
-              if (email && !loginSchema.shape.email.safeParse(email).success) setErrors((current) => ({ ...current, email: "Enter a valid email address." }));
+              if (email && !loginSchema.shape.email.safeParse(email).success) setErrors((current) => ({ ...current, email: t("invalidEmail") }));
             }}
           />
         </div>
@@ -103,8 +106,8 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
 
       <div className="login-field">
         <div className="login-label-row">
-          <label htmlFor="login-password">Password</label>
-          <a href="/forgot-password">Forgot password?</a>
+          <label htmlFor="login-password">{t("password")}</label>
+          <Link href="/forgot-password">{t("forgot")}</Link>
         </div>
         <div className={`login-input-wrap${errors.password ? " has-error" : ""}`}>
           <KeyRound size={18} aria-hidden="true" />
@@ -125,7 +128,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           <button
             className="login-password-toggle"
             type="button"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? t("hidePassword") : t("showPassword")}
             aria-pressed={showPassword}
             onClick={() => setShowPassword((value) => !value)}
           >
@@ -137,12 +140,12 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
 
       <label className="login-remember">
         <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
-        <span>Remember me</span>
+        <span>{t("remember")}</span>
       </label>
 
       {message && <p className="login-message" role="alert" aria-live="polite">{message}</p>}
       <button className="button button-primary login-submit" type="submit" disabled={busy}>
-        {busy ? <><LoaderCircle size={17} className="login-spinner" aria-hidden="true" /> Logging in…</> : "Log in"}
+        {busy ? <><LoaderCircle size={17} className="login-spinner" aria-hidden="true" /> {t("submitting")}</> : t("submit")}
       </button>
     </form>
   );

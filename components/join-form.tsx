@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { X } from "lucide-react";
-import { CLUB_COMMITTEES } from "@/data/committees";
+import { CLUB_COMMITTEES, committeeDetails } from "@/data/committees";
 import { joinApplicationSchema } from "@/lib/schemas";
 import { useSite } from "./site-provider";
 import { useAppToast } from "@/components/app-toast-provider";
@@ -11,7 +11,7 @@ type FormFields = { name: string; email: string; committees: string[]; message: 
 const initialForm: FormFields = { name: "", email: "", committees: [], message: "" };
 
 export function JoinForm() {
-  const { text } = useSite();
+  const { text, language } = useSite();
   const showToast = useAppToast();
   const [form, setForm] = useState<FormFields>(initialForm);
   const [committeeChoice, setCommitteeChoice] = useState("");
@@ -25,7 +25,7 @@ export function JoinForm() {
     if (!parsed.success) {
       const committeeIssue = parsed.error.issues.some((issue) => issue.path[0] === "committees");
       const emailIssue = parsed.error.issues.some((issue) => issue.path[0] === "email");
-      setErrorMessage(emailIssue ? text.join.invalidEmail : committeeIssue ? "Choose between 1 and 3 committees." : text.join.required);
+      setErrorMessage(emailIssue ? text.join.invalidEmail : committeeIssue ? text.committeeUi.chooseLimit : text.join.required);
       return;
     }
 
@@ -50,7 +50,7 @@ export function JoinForm() {
   function addCommittee(value: string) {
     if (!value) return;
     if (form.committees.length >= 3) {
-      setErrorMessage("You can choose up to 3 committees.");
+      setErrorMessage(text.join.committeeLimit);
       setCommitteeChoice("");
       return;
     }
@@ -87,17 +87,17 @@ export function JoinForm() {
           aria-describedby="join-committee-hint"
           required={!form.committees.length}
         >
-          <option value="" disabled>Choose a committee</option>
+          <option value="" disabled>{text.join.select}</option>
           {CLUB_COMMITTEES.filter((committee) => !form.committees.includes(committee)).map((committee) => (
-            <option value={committee} key={committee} disabled={form.committees.length >= 3}>{committee}</option>
+            <option value={committee} key={committee} disabled={form.committees.length >= 3}>{language === "ar" ? committeeDetails[committee].nameAr : committee}</option>
           ))}
         </select>
-        <span className="join-committee-hint" id="join-committee-hint">Choose up to 3 committees.</span>
-        {!!form.committees.length && <ul className="join-committee-pills" aria-label="Selected committees">
+        <span className="join-committee-hint" id="join-committee-hint">{text.join.committeeHint}</span>
+        {!!form.committees.length && <ul className="join-committee-pills" aria-label={text.committeeUi.selected}>
           {form.committees.map((committee) => (
             <li key={committee}>
-              <span>{committee}</span>
-              <button type="button" aria-label={`Remove ${committee}`} onClick={() => removeCommittee(committee)}><X size={14} aria-hidden="true" /></button>
+              <span>{language === "ar" ? committeeDetails[committee as keyof typeof committeeDetails].nameAr : committee}</span>
+              <button type="button" aria-label={text.committeeUi.remove.replace("{committee}", committee)} onClick={() => removeCommittee(committee)}><X size={14} aria-hidden="true" /></button>
             </li>
           ))}
         </ul>}
@@ -105,7 +105,7 @@ export function JoinForm() {
       <label>{text.join.message}<textarea name="message" rows={5} value={form.message} onChange={(event) => update("message", event.target.value)} placeholder={text.join.messageHint} required maxLength={2000} /></label>
       {errorMessage && <p className="form-error" role="alert">{errorMessage}</p>}
       <button className="button button-primary button-large form-submit" type="submit" disabled={status === "sending"}>
-        {status === "sending" ? text.join.submitting : text.join.submit}<span aria-hidden="true">↗</span>
+        {status === "sending" ? text.join.submitting : text.join.submit}<span aria-hidden="true">{language === "ar" ? "↖" : "↗"}</span>
       </button>
     </form>
   );

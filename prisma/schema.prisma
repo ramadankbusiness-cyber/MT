@@ -83,6 +83,7 @@ model User {
   sessionVersion     Int      @default(0)
   phone              String?
   photoUrl           String?
+  preferredLanguage  String   @default("en") @db.VarChar(2)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   committee          Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
@@ -106,8 +107,10 @@ model TeamMember {
   id          String    @id @default(cuid())
   name        String
   title       String
+  titleAr     String?
   committeeId String
   bio         String?   @db.VarChar(500)
+  bioAr       String?   @db.VarChar(500)
   socialLinks Json?
   photoUrl    String?
   order       Int       @default(0)
@@ -140,7 +143,9 @@ model Zone {
 model Event {
   id          String   @id @default(cuid())
   title       String
+  titleAr     String?
   description String   @db.VarChar(2000)
+  descriptionAr String? @db.VarChar(2000)
   startsAt    DateTime
   endsAt      DateTime?
   location    String?
@@ -252,7 +257,9 @@ model Excuse {
 model Notification {
   id          String               @id @default(cuid())
   title       String
-  message     String               @db.VarChar(3000)
+  titleAr     String?
+  message     String   @db.VarChar(3000)
+  messageAr   String?  @db.VarChar(3000)
   link        String?
   type        NotificationType
   audience    NotificationAudience

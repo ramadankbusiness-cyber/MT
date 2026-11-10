@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Bell } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type InboxItem = {
   id: string;
@@ -12,6 +13,7 @@ type InboxItem = {
 };
 
 export function NotificationBell() {
+  const t = useTranslations("site.notifications");
   const { data: session } = useSession();
   const [unreadCount, setUnreadCount] = useState(0);
   const [items, setItems] = useState<InboxItem[]>([]);
@@ -50,18 +52,18 @@ export function NotificationBell() {
   if (!session?.user) return null;
   return (
     <div className="notification-bell-wrap">
-      <button className="notification-button" type="button" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} aria-expanded={open} onClick={() => { setOpen((value) => !value); if (!open) void refresh(); }}>
+      <button className="notification-button" type="button" aria-label={`${t("bell")}${unreadCount ? `, ${t("unread", { count: unreadCount })}` : ""}`} aria-expanded={open} onClick={() => { setOpen((value) => !value); if (!open) void refresh(); }}>
         <Bell size={18} aria-hidden="true" />
         {unreadCount > 0 && <span className="notification-count">{unreadCount > 99 ? "99+" : unreadCount}</span>}
       </button>
-      {open && <div className="notification-popover" role="region" aria-label="Recent notifications">
-        <div className="notification-popover-heading"><strong>Notifications</strong><Link href="/notifications" onClick={() => setOpen(false)}>View all</Link></div>
+      {open && <div className="notification-popover" role="region" aria-label={t("recent")}>
+        <div className="notification-popover-heading"><strong>{t("bell")}</strong><Link href="/notifications" onClick={() => setOpen(false)}>{t("viewAll")}</Link></div>
         {items.length ? items.map((item) => (
           <div className="notification-preview" key={item.id}>
             <div><strong>{item.notification.important && <span aria-label="Important">★ </span>}{item.notification.title}</strong><p>{item.notification.message}</p></div>
-            <button type="button" aria-label={`Mark ${item.notification.title} as read`} onClick={() => void markRead(item.notification.id)}>Mark read</button>
+            <button type="button" aria-label={`${t("markRead")}: ${item.notification.title}`} onClick={() => void markRead(item.notification.id)}>{t("markRead")}</button>
           </div>
-        )) : <p className="empty-note">You are all caught up.</p>}
+        )) : <p className="empty-note">{t("caughtUp")}</p>}
       </div>}
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight, BookOpen, Hammer, Users, type LucideIcon } from "lucide-react";
-import { features, principles, stats } from "@/data/site";
+import { Link } from "@/i18n/navigation";
+import { ArrowLeft, ArrowRight, BookOpen, Hammer, Users, type LucideIcon } from "lucide-react";
+import { features as featureMeta } from "@/data/site";
 import { useSite } from "./site-provider";
 
 const icons: Record<string, LucideIcon> = { sparkles: BookOpen, hammer: Hammer, users: Users };
@@ -10,6 +10,7 @@ const icons: Record<string, LucideIcon> = { sparkles: BookOpen, hammer: Hammer, 
 export function HomeContent() {
   const { text, language } = useSite();
   const home = text.home;
+  const Arrow = language === "ar" ? ArrowLeft : ArrowRight;
   return (
     <>
       <section className="hero-section">
@@ -17,18 +18,18 @@ export function HomeContent() {
         <div className="hero-glow hero-glow-b" />
         <div className="hero-content">
           <p className="status-pill"><span className="status-dot" />{home.badge}</p>
-          <h1>{language === "ar" ? <>حيث تصنع العقول <span className="gradient-text">الطموحة معًا.</span></> : <>Where ambitious minds <span className="gradient-text">build together.</span></>}</h1>
+          <h1>{home.title}</h1>
           <p className="hero-lead">{home.lead}</p>
           <div className="hero-actions">
-            <Link className="button button-primary button-large" href="/join">{home.become}<ArrowRight size={17} aria-hidden="true" /></Link>
+            <Link className="button button-primary button-large" href="/join">{home.become}<Arrow size={17} aria-hidden="true" /></Link>
             <Link className="button button-secondary button-large" href="/events">{home.eventsButton}</Link>
           </div>
         </div>
         <div className="stats-strip" aria-label="MT Club at a glance">
-          {stats.map((stat) => (
+          {home.stats.map((stat) => (
             <div className="stat-cell" key={stat.label}>
               <strong>{stat.value}</strong>
-              <span>{language === "ar" ? stat.labelAr : stat.label}</span>
+              <span>{stat.label}</span>
             </div>
           ))}
         </div>
@@ -40,13 +41,13 @@ export function HomeContent() {
           <h2>{home.whatTitle}</h2>
         </div>
         <div className="feature-grid">
-          {features.map((feature) => {
-            const Icon = icons[feature.icon];
+          {home.features.map((feature, index) => {
+            const Icon = icons[featureMeta[index].icon];
             return (
               <article className="feature-card" key={feature.title}>
                 <div className="icon-tile"><Icon size={22} strokeWidth={1.8} aria-hidden="true" /></div>
-                <h3>{language === "ar" ? feature.titleAr : feature.title}</h3>
-                <p>{language === "ar" ? feature.descriptionAr : feature.description}</p>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
               </article>
             );
           })}
@@ -56,28 +57,13 @@ export function HomeContent() {
       <section className="content-section cta-section">
         <div className="cta-panel">
           <div>
-            <p className="eyebrow">{language === "ar" ? "المكان يتّسع لك" : "YOUR NEXT CHAPTER"}</p>
+            <p className="eyebrow">{home.ctaEyebrow}</p>
             <h2>{home.ctaTitle}</h2>
             <p>{home.ctaText}</p>
           </div>
-          <Link className="button button-secondary button-large" href="/join">{home.ctaButton}<ArrowRight size={17} aria-hidden="true" /></Link>
+          <Link className="button button-secondary button-large" href="/join">{home.ctaButton}<Arrow size={17} aria-hidden="true" /></Link>
         </div>
       </section>
     </>
-  );
-}
-
-export function PrincipleCards() {
-  const { language } = useSite();
-  return (
-    <div className="feature-grid">
-      {principles.map((item, index) => (
-        <article className="feature-card principle-card" key={item.title}>
-          <span className="principle-number">0{index + 1}</span>
-          <h2>{language === "ar" ? item.titleAr : item.title}</h2>
-          <p>{language === "ar" ? item.descriptionAr : item.description}</p>
-        </article>
-      ))}
-    </div>
   );
 }

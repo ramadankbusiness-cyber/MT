@@ -42,8 +42,10 @@ export const userRoleUpdateSchema = z.object({
 export const teamMemberSchema = z.object({
   name: z.string().trim().min(2).max(100),
   title: z.string().trim().min(2).max(100),
+  titleAr: z.string().trim().max(100).optional().nullable(),
   committeeId: z.string().min(1),
   bio: z.string().trim().max(500).optional().nullable(),
+  bioAr: z.string().trim().max(500).optional().nullable(),
   socialLinks: z.object({
     website: z.string().url().max(300).optional().or(z.literal("")),
     linkedin: z.string().url().max(300).optional().or(z.literal("")),
@@ -65,7 +67,9 @@ export const zoneSchema = z.object({
 
 export const eventSchema = z.object({
   title: z.string().trim().min(2).max(120),
+  titleAr: z.string().trim().max(120).optional().nullable(),
   description: z.string().trim().min(2).max(2000),
+  descriptionAr: z.string().trim().max(2000).optional().nullable(),
   startsAt: z.coerce.date(),
   endsAt: z.coerce.date().optional().nullable(),
   location: z.string().trim().max(250).optional().nullable(),
@@ -100,7 +104,9 @@ export const checkInSchema = z.object({
 
 export const notificationSchema = z.object({
   title: z.string().trim().min(2).max(120),
+  titleAr: z.string().trim().max(120).optional().nullable(),
   message: z.string().trim().min(2).max(3000),
+  messageAr: z.string().trim().max(3000).optional().nullable(),
   link: z.string().startsWith("/").max(500).refine((value) => !value.startsWith("//") && !value.includes("\\"), "Use a same-site link").optional().nullable(),
   type: z.enum(["ANNOUNCEMENT", "NEW_EVENT", "EVENT_REMINDER", "SESSION_OPENED", "ATTENDANCE_CONFIRMED", "ATTENDANCE_REJECTED", "ABSENCE_WARNING", "ACCOUNT_CREATED", "PASSWORD_CHANGED", "ROLE_CHANGED", "EXCUSE_DECISION"]).default("ANNOUNCEMENT"),
   audience: z.enum(["EVERYONE", "ROLE", "COMMITTEE", "USERS"]),

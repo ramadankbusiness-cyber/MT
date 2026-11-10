@@ -171,6 +171,19 @@ h1, h2, h3, p { margin-top: 0; }
 .cta-panel p:not(.eyebrow) { margin: 0; color: #c0bec9; font-size: 14px; }
 .principle-card { min-height: 218px; }
 .principle-number { display: block; margin-bottom: 34px; color: var(--accent-strong); font-family: var(--heading-font); font-size: 13px; font-weight: 700; }
+.committee-section { margin-top: 82px; }
+.committee-section-heading { margin-bottom: 38px; }
+.committee-section-heading h2 { margin-bottom: 14px; font-family: var(--heading-font); font-size: clamp(32px, 4.5vw, 48px); font-weight: 700; letter-spacing: -.02em; line-height: 1.08; }
+.committee-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.committee-card { min-height: 0; }
+.committee-card.is-visible { animation: committee-reveal .5s ease var(--committee-delay, 0ms) backwards; }
+.committee-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.committee-icon-tile { margin-bottom: 22px; }
+.committee-card .principle-number { margin: 4px 0 0; }
+.committee-card h3 { margin-bottom: 2px; }
+.committee-card .committee-full-name { margin-bottom: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.committee-cta { display: flex; justify-content: center; margin-top: 34px; }
+@keyframes committee-reveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
 .inner-page { min-height: calc(100vh - 138px); }
 .page-intro { padding-top: 94px; padding-bottom: 110px; animation: page-enter .5s ease both; }
@@ -475,6 +488,8 @@ h1, h2, h3, p { margin-top: 0; }
   .hero-section { min-height: 640px; padding-top: 76px; }
   .stats-strip { margin-top: 58px; }
   .content-section { width: calc(100% - 40px); padding: 78px 0; }
+  .committee-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .committee-section { margin-top: 66px; }
   .cta-section { padding-top: 0; }
   .cta-panel { padding: 42px; }
 }
@@ -491,6 +506,7 @@ h1, h2, h3, p { margin-top: 0; }
   .stat-cell strong { font-size: 24px; }
   .content-section { width: calc(100% - 36px); padding: 64px 0; }
   .feature-grid { grid-template-columns: 1fr; gap: 12px; }
+  .committee-grid { grid-template-columns: 1fr; }
   .feature-card { min-height: auto; padding: 24px; }
   .icon-tile { margin-bottom: 24px; }
   .cta-section { padding-top: 0; }
@@ -531,7 +547,19 @@ h1, h2, h3, p { margin-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .committee-card.is-visible { animation: none; }
 }
+
+.language-tabs { display: flex; width: fit-content; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
+.language-tabs button { padding: 7px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+.language-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 5px rgba(0, 0, 0, .1); }
+:root[dir="rtl"] body { line-height: 1.7; }
+:root[dir="rtl"] h1,
+:root[dir="rtl"] h2,
+:root[dir="rtl"] h3 { letter-spacing: 0; }
+:root[dir="rtl"] .brand,
+:root[dir="rtl"] .team-avatar,
+:root[dir="rtl"] .profile-photo { letter-spacing: 0; }
 
 .login-page {
   position: relative;

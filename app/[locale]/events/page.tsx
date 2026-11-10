@@ -13,9 +13,9 @@ export default async function EventsPage() {
   const publicEvents = events.length ? events.map((event) => ({
     date: event.startsAt.toISOString().slice(0, 10),
     title: event.title,
-    titleAr: event.title,
+    titleAr: event.titleAr || event.title,
     description: event.description,
-    descriptionAr: event.description,
+    descriptionAr: event.descriptionAr || event.description,
     status: (event.startsAt >= now ? "Upcoming" : "Recent") as "Upcoming" | "Recent",
     statusAr: (event.startsAt >= now ? "قادم" : "حديث") as "قادم" | "حديث",
   })) : fallbackEvents;

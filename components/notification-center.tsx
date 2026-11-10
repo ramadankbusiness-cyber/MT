@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { PushSettings } from "@/components/push-settings";
+import { useLocale, useTranslations } from "next-intl";
 
-const types = ["ANNOUNCEMENT", "NEW_EVENT", "EVENT_REMINDER", "SESSION_OPENED", "ATTENDANCE_CONFIRMED", "ATTENDANCE_REJECTED", "ABSENCE_WARNING", "ACCOUNT_CREATED", "PASSWORD_CHANGED", "ROLE_CHANGED", "EXCUSE_DECISION"];
+const types = ["ANNOUNCEMENT", "NEW_EVENT", "EVENT_REMINDER", "SESSION_OPENED", "ATTENDANCE_CONFIRMED", "ATTENDANCE_REJECTED", "ABSENCE_WARNING", "ACCOUNT_CREATED", "PASSWORD_CHANGED", "ROLE_CHANGED", "EXCUSE_DECISION"] as const;
 type InboxItem = {
   id: string;
   readAt: string | null;
@@ -13,6 +14,8 @@ type InboxItem = {
 type Preference = { type: string; inApp: boolean; push: boolean };
 
 export function NotificationCenter() {
+  const t = useTranslations("site.notifications");
+  const locale = useLocale();
   const [items, setItems] = useState<InboxItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [type, setType] = useState("");
@@ -23,7 +26,7 @@ export function NotificationCenter() {
     const query = filter ? `?type=${encodeURIComponent(filter)}` : "";
     const response = await fetch(`/api/notifications${query}`, { cache: "no-store" });
     if (!response.ok) {
-      setMessage("Could not load notifications. Please try again.");
+      setMessage(t("loadError"));
       return;
     }
     const result = await response.json();
@@ -45,7 +48,7 @@ export function NotificationCenter() {
       body: JSON.stringify({ action }),
     });
     if (!response.ok) {
-      setMessage("That notification could not be updated.");
+      setMessage(t("updateError"));
       return;
     }
     await refresh();
@@ -53,7 +56,7 @@ export function NotificationCenter() {
 
   async function markAllRead() {
     const response = await fetch("/api/notifications/read-all", { method: "POST" });
-    if (!response.ok) setMessage("Could not mark notifications as read.");
+    if (!response.ok) setMessage(t("readError"));
     else await refresh();
   }
 
@@ -65,7 +68,7 @@ export function NotificationCenter() {
       body: JSON.stringify(next),
     });
     if (!response.ok) {
-      setMessage("Could not save your notification preference.");
+      setMessage(t("preferenceError"));
       return;
     }
     setPreferences((current) => current.map((item) => item.type === next.type ? next : item));
@@ -75,33 +78,38 @@ export function NotificationCenter() {
   return (
     <div className="notification-center">
       <div className="notification-toolbar">
-        <label>Filter by type<select value={type} onChange={(event) => { setType(event.target.value); void refresh(event.target.value); }}><option value="">All notifications</option>{types.map((item) => <option value={item} key={item}>{item.replaceAll("_", " ").toLowerCase()}</option>)}</select></label>
-        <button className="button button-secondary" type="button" disabled={!unreadCount} onClick={() => void markAllRead()}>Mark all read</button>
+        <label>{t("filter")}<select value={type} onChange={(event) => { setType(event.target.value); void refresh(event.target.value); }}><option value="">{t("all")}</option>{types.map((item) => <option value={item} key={item}>{t(`typeOptions.${item}`)}</option>)}</select></label>
+        <button className="button button-secondary" type="button" disabled={!unreadCount} onClick={() => void markAllRead()}>{t("markAllRead")}</button>
       </div>
       {message && <p className="form-message" role="status">{message}</p>}
       <div className="notification-list">
         {items.map((item) => (
           <article className={`notification-item${item.readAt ? " is-read" : ""}`} key={item.id}>
             <div className="notification-item-copy">
-              <div className="notification-item-title">{item.notification.important && <span className="important-tag">Important</span>}<span className="notification-type">{item.notification.type.replaceAll("_", " ")}</span></div>
+              <div className="notification-item-title">{item.notification.important && <span className="important-tag">{t("important")}</span>}<span className="notification-type">{types.includes(item.notification.type as typeof types[number]) ? t(`typeOptions.${item.notification.type as typeof types[number]}`) : item.notification.type}</span></div>
               <h2>{item.notification.title}</h2><p>{item.notification.message}</p>
-              <time dateTime={item.notification.createdAt}>{new Date(item.notification.createdAt).toLocaleString()}</time>
-              {item.notification.link && <Link href={item.notification.link}>Open update →</Link>}
+              <time dateTime={item.notification.createdAt}>{new Date(item.notification.createdAt).toLocaleString(locale)}</time>
+              {item.notification.link && <Link href={item.notification.link}>{t("open")}</Link>}
             </div>
             <div className="notification-item-actions">
-              <button type="button" onClick={() => void act(item, item.readAt ? "unread" : "read")}>{item.readAt ? "Mark unread" : "Mark read"}</button>
-              <button type="button" onClick={() => void act(item, "delete")}>Delete</button>
+              <button type="button" onClick={() => void act(item, item.readAt ? "unread" : "read")}>{item.readAt ? t("markUnread") : t("markRead")}</button>
+              <button type="button" onClick={() => void act(item, "delete")}>{t("delete")}</button>
             </div>
           </article>
         ))}
-        {!items.length && <div className="empty-events"><h2>No notifications</h2><p>Updates from the club will appear here.</p></div>}
+        {!items.length && <div className="empty-events"><h2>{t("emptyTitle")}</h2><p>{t("empty")}</p></div>}
       </div>
 
       <section className="notification-preferences">
-        <h2>Delivery preferences</h2>
-        <p>Choose which categories appear in your inbox or are sent to this device.</p>
-        <div className="preference-table-wrap"><table className="preference-table"><thead><tr><th>Type</th><th>In-app</th><th>Push</th></tr></thead><tbody>
-          {preferences.map((preference) => <tr key={preference.type}><th scope="row">{preference.type.replaceAll("_", " ").toLowerCase()}</th><td><input aria-label={`${preference.type} in-app notifications`} type="checkbox" checked={preference.inApp} onChange={() => void updatePreference(preference, "inApp")} /></td><td><input aria-label={`${preference.type} push notifications`} type="checkbox" checked={preference.push} onChange={() => void updatePreference(preference, "push")} /></td></tr>)}
+        <h2>{t("preferences")}</h2>
+        <p>{t("preferencesHint")}</p>
+        <div className="preference-table-wrap"><table className="preference-table"><thead><tr><th>{t("type")}</th><th>{t("inApp")}</th><th>{t("push")}</th></tr></thead><tbody>
+          {preferences.map((preference) => {
+            const typeLabel = types.includes(preference.type as typeof types[number])
+              ? t(`typeOptions.${preference.type as typeof types[number]}`)
+              : preference.type;
+            return <tr key={preference.type}><th scope="row">{typeLabel}</th><td><input aria-label={t("inAppAria", { type: typeLabel })} type="checkbox" checked={preference.inApp} onChange={() => void updatePreference(preference, "inApp")} /></td><td><input aria-label={t("pushAria", { type: typeLabel })} type="checkbox" checked={preference.push} onChange={() => void updatePreference(preference, "push")} /></td></tr>;
+          })}
         </tbody></table></div>
         <PushSettings />
       </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { CalendarClock } from "lucide-react";
 import type { ClubEvent } from "@/data/events";
 import { EventCard } from "@/components/event-card";

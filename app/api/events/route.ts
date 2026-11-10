@@ -48,7 +48,9 @@ async function POSTInternal(request: Request) {
   if (event.published) {
     await createImmediateNotification({
       title: `New event: ${event.title}`,
+      titleAr: `فعالية جديدة: ${event.titleAr || event.title}`,
       message: event.description,
+      messageAr: event.descriptionAr || event.description,
       link: `/events?event=${encodeURIComponent(event.id)}`,
       type: "NEW_EVENT",
       audience: event.committeeId ? "COMMITTEE" : "EVERYONE",

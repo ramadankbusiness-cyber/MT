@@ -1,16 +1,18 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { LoaderCircle, Mail } from "lucide-react";
 import { forgotPasswordSchema, resetPasswordSchema } from "@/lib/schemas";
 import { useAppToast } from "@/components/app-toast-provider";
+import { useTranslations } from "next-intl";
 
 function isValidPassword(value: string) {
   return resetPasswordSchema.shape.newPassword.safeParse(value).success;
 }
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("site.passwordReset");
   const showToast = useAppToast();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,7 +24,7 @@ export function ForgotPasswordForm() {
     setError("");
     const parsed = forgotPasswordSchema.safeParse({ email });
     if (!parsed.success) {
-      setError("Enter a valid email address.");
+      setError(t("invalidEmail"));
       return;
     }
     setBusy(true);
@@ -35,7 +37,7 @@ export function ForgotPasswordForm() {
       if (!response.ok) throw new Error("Reset request failed");
       setSent(true);
     } catch {
-      const errorMessage = "We couldn’t process your request right now. Please try again.";
+      const errorMessage = t("requestFailed");
       setError(errorMessage);
       showToast(errorMessage);
     } finally {
@@ -44,13 +46,13 @@ export function ForgotPasswordForm() {
   }
 
   if (sent) {
-    return <p className="login-message login-success" role="status" aria-live="polite">If the account exists, we sent a reset link.</p>;
+    return <p className="login-message login-success" role="status" aria-live="polite">{t("sent")}</p>;
   }
 
   return (
     <form className="login-form" onSubmit={submit} noValidate>
       <div className="login-field">
-        <label htmlFor="reset-email">Email</label>
+        <label htmlFor="reset-email">{t("email")}</label>
         <div className="login-input-wrap">
           <Mail size={18} aria-hidden="true" />
           <input id="reset-email" name="email" type="email" autoComplete="email" autoFocus maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} />
@@ -58,13 +60,14 @@ export function ForgotPasswordForm() {
       </div>
       {error && <p className="login-message" role="alert" aria-live="polite">{error}</p>}
       <button className="button button-primary login-submit" type="submit" disabled={busy}>
-        {busy ? <><LoaderCircle size={17} className="login-spinner" aria-hidden="true" /> Sending…</> : "Send reset link"}
+        {busy ? <><LoaderCircle size={17} className="login-spinner" aria-hidden="true" /> {t("sending")}</> : t("send")}
       </button>
     </form>
   );
 }
 
 export function ResetPasswordForm({ token }: { token: string }) {
+  const t = useTranslations("site.passwordReset");
   const router = useRouter();
   const showToast = useAppToast();
   const [password, setPassword] = useState("");
@@ -76,7 +79,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     event.preventDefault();
     setError("");
     if (!isValidPassword(password)) {
-      setError("Use at least 12 characters with uppercase, lowercase, and a number.");
+      setError(t("invalidPassword"));
       return;
     }
     setBusy(true);
@@ -86,9 +89,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword: password }),
       });
-      const result = await response.json();
       if (!response.ok) {
-        const errorMessage = result.error ?? "This reset link is invalid or expired.";
+        const errorMessage = t("invalidLink");
         setError(errorMessage);
         showToast(errorMessage);
         return;
@@ -96,7 +98,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       setDone(true);
       window.setTimeout(() => router.replace("/login"), 1200);
     } catch {
-      const errorMessage = "We couldn’t reset your password right now. Please try again.";
+      const errorMessage = t("resetFailed");
       setError(errorMessage);
       showToast(errorMessage);
     } finally {
@@ -104,20 +106,20 @@ export function ResetPasswordForm({ token }: { token: string }) {
     }
   }
 
-  if (done) return <p className="login-message login-success" role="status" aria-live="polite">Your password has been updated. Redirecting to log in…</p>;
+  if (done) return <p className="login-message login-success" role="status" aria-live="polite">{t("updated")}</p>;
 
   return (
     <form className="login-form" onSubmit={submit} noValidate>
       <div className="login-field">
-        <label htmlFor="new-password">New password</label>
+        <label htmlFor="new-password">{t("newPassword")}</label>
         <div className="login-input-wrap">
           <input id="new-password" name="new-password" type="password" autoComplete="new-password" autoFocus maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} />
         </div>
-        <p className="login-password-rules">At least 12 characters, including uppercase, lowercase, and a number.</p>
+        <p className="login-password-rules">{t("rules")}</p>
       </div>
       {error && <p className="login-message" role="alert" aria-live="polite">{error}</p>}
       <button className="button button-primary login-submit" type="submit" disabled={busy}>
-        {busy ? <><LoaderCircle size={17} className="login-spinner" aria-hidden="true" /> Saving…</> : "Reset password"}
+        {busy ? <><LoaderCircle size={17} className="login-spinner" aria-hidden="true" /> {t("saving")}</> : t("reset")}
       </button>
     </form>
   );

@@ -27,8 +27,10 @@ async function POSTInternal(request: Request) {
     data: {
       name: parsed.data.name,
       title: parsed.data.title,
+      titleAr: parsed.data.titleAr || null,
       committeeId: parsed.data.committeeId,
       bio: parsed.data.bio || null,
+      bioAr: parsed.data.bioAr || null,
       socialLinks: parsed.data.socialLinks ?? undefined,
       photoUrl: parsed.data.photoUrl || null,
       order: parsed.data.order ?? (await prisma.teamMember.count()),

@@ -3,15 +3,21 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "@/components/login-form";
 import { safeReturnPath } from "@/lib/login";
-
-export const metadata = { title: "Log in" };
+import { getTranslations } from "next-intl/server";
 
 type LoginPageProps = {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ callbackUrl?: string | string[]; message?: string | string[] }>;
 };
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const [session, query] = await Promise.all([auth(), searchParams]);
+export async function generateMetadata({ params }: LoginPageProps) {
+  const { locale } = await params;
+  return { title: locale === "ar" ? "تسجيل الدخول" : "Log in" };
+}
+
+export default async function LoginPage({ params, searchParams }: LoginPageProps) {
+  const [{ locale }, session, query] = await Promise.all([params, auth(), searchParams]);
+  const t = await getTranslations({ locale, namespace: "site.login" });
   if (session?.user?.id) {
     redirect(session.user.mustChangePassword ? "/change-password" : "/dashboard");
   }
@@ -27,11 +33,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <Image src="/mt-logo.png" alt="" width={42} height={42} priority />
           <span>MT Club</span>
         </div>
-        <h1 id="login-title">Welcome <span className="gradient-text">back</span></h1>
-        <p className="login-subtitle">Log in to access your club account.</p>
-        {notice === "login-required" && <p className="login-notice" role="status">Please log in to continue to that page.</p>}
+        <h1 id="login-title">{t("welcome")} <span className="gradient-text">{t("back")}</span></h1>
+        <p className="login-subtitle">{t("subtitle")}</p>
+        {notice === "login-required" && <p className="login-notice" role="status">{t("required")}</p>}
         <LoginForm callbackUrl={callbackUrl} />
-        <p className="login-footnote">Don&apos;t have an account? Ask your club admin.</p>
+        <p className="login-footnote">{t("noAccount")}</p>
       </section>
     </main>
   );

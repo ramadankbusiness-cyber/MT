@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
-import { SiteProvider } from "@/components/site-provider";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { AuthSessionProvider } from "@/components/auth-session-provider";
-import { PwaRegistrar } from "@/components/pwa-registrar";
-import { AppToastProvider } from "@/components/app-toast-provider";
 import "leaflet/dist/leaflet.css";
 import { cairo, inter, spaceGrotesk } from "./fonts";
 
@@ -33,24 +28,16 @@ export const metadata: Metadata = {
     apple: "/mt-logo.png",
   },
   manifest: "/manifest.json",
+  alternates: {
+    languages: { en: "/en", ar: "/ar" },
+  },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = (await headers()).get("x-mt-locale") === "ar" ? "ar" : "en";
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} ${cairo.variable}`} suppressHydrationWarning>
-      <body>
-        <SiteProvider>
-          <AuthSessionProvider>
-            <AppToastProvider>
-              <PwaRegistrar />
-              <a className="skip-link" href="#main-content">Skip to main content</a>
-              <Navbar />
-              {children}
-              <Footer />
-            </AppToastProvider>
-          </AuthSessionProvider>
-        </SiteProvider>
-      </body>
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} className={`${spaceGrotesk.variable} ${inter.variable} ${cairo.variable}`} suppressHydrationWarning>
+      <body>{children}</body>
     </html>
   );
 }

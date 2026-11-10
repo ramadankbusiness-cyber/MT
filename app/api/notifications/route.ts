@@ -60,7 +60,14 @@ async function GETInternal(request: Request) {
   });
   const hidden = await prisma.notificationPreference.findMany({ where: { userId: access.user.id, inApp: false }, select: { type: true } });
   const hiddenTypes = new Set(hidden.map((preference) => preference.type));
-  const notifications = rows.filter((row) => !hiddenTypes.has(row.notification.type)).slice(0, 50);
+  const notifications = rows.filter((row) => !hiddenTypes.has(row.notification.type)).slice(0, 50).map((row) => ({
+    ...row,
+    notification: {
+      ...row.notification,
+      title: access.user.preferredLanguage === "ar" ? row.notification.titleAr || row.notification.title : row.notification.title,
+      message: access.user.preferredLanguage === "ar" ? row.notification.messageAr || row.notification.message : row.notification.message,
+    },
+  }));
   const unreadCount = await countUnreadForUser(access.user.id);
   return NextResponse.json({ notifications, unreadCount });
 }
@@ -107,7 +114,9 @@ async function POSTInternal(request: Request) {
     const created = await transaction.notification.create({
       data: {
         title: input.title,
+        titleAr: input.titleAr || null,
         message: input.message,
+        messageAr: input.messageAr || null,
         link: input.link ?? null,
         type: input.type,
         audience: input.audience,
