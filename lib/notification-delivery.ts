@@ -1,6 +1,8 @@
 import { sendNotification, setVapidDetails } from "web-push";
 import { NotificationType } from "@prisma/client";
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { countUnexcusedAbsences, getAbsenceWarningThreshold } from "@/lib/attendance";
 
 export async function dispatchPushNotification(notificationId: string) {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -99,11 +101,12 @@ export async function createImmediateNotification(input: {
   userIds?: string[];
 }) {
   const now = new Date();
+  const { userIds, ...notificationData } = input;
   const users = await prisma.user.findMany({
     where: {
       isActive: true,
       ...(input.audience === "COMMITTEE" && input.committeeId ? { committeeId: input.committeeId } : {}),
-      ...(input.audience === "USERS" ? { id: { in: input.userIds ?? [] } } : {}),
+      ...(input.audience === "USERS" ? { id: { in: userIds ?? [] } } : {}),
     },
     select: { id: true, notificationPreferences: { where: { type: input.type }, select: { inApp: true, push: true } } },
   });
@@ -114,7 +117,7 @@ export async function createImmediateNotification(input: {
   const notification = await prisma.$transaction(async (transaction) => {
     const created = await transaction.notification.create({
       data: {
-        ...input,
+        ...notificationData,
         sentAt: now,
       },
     });
@@ -221,6 +224,55 @@ export async function dispatchOperationalReminders(now = new Date()) {
       return createdNotification;
     });
     await dispatchPushNotification(notification.id);
+    created += 1;
+  }
+
+  const warningThreshold = getAbsenceWarningThreshold();
+  const completedSessions = await prisma.attendanceSession.findMany({
+    where: { endsAt: { lte: now } },
+    select: { id: true, committeeId: true, createdById: true, startsAt: true },
+    orderBy: { startsAt: "desc" },
+  });
+  const participants = await prisma.user.findMany({
+    where: { isActive: true, role: "MEMBER" },
+    select: {
+      id: true,
+      committeeId: true,
+      createdAt: true,
+      attendance: {
+        where: { session: { endsAt: { lte: now } } },
+        select: { sessionId: true, status: true },
+      },
+    },
+  });
+  for (const participant of participants) {
+    const eligibleSessions = completedSessions.filter(
+      (session) => session.startsAt >= participant.createdAt
+        && (!session.committeeId || session.committeeId === participant.committeeId),
+    );
+    if (!eligibleSessions.length) continue;
+    const absenceCount = countUnexcusedAbsences(
+      eligibleSessions.map((session) => session.id),
+      participant.attendance,
+    );
+    if (absenceCount < warningThreshold) continue;
+    const warningKey = createHash("sha256").update(participant.id).digest("hex").slice(0, 20);
+    const link = `/attendance?warning=${warningKey}`;
+    const exists = await prisma.notification.findFirst({
+      where: { type: "ABSENCE_WARNING", link },
+      select: { id: true },
+    });
+    if (exists) continue;
+    await createImmediateNotification({
+      title: "Attendance needs attention",
+      message: `You have ${absenceCount} unexcused absences, reaching the club warning threshold of ${warningThreshold}.`,
+      link,
+      type: "ABSENCE_WARNING",
+      audience: "USERS",
+      committeeId: null,
+      createdById: eligibleSessions[0].createdById,
+      userIds: [participant.id],
+    });
     created += 1;
   }
   return created;

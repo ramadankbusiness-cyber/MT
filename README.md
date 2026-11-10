@@ -39,4 +39,6 @@ The site includes a web app manifest, a service worker, in-app notifications, SS
 
 Account recovery emails use Resend when `RESEND_API_KEY` and `AUTH_EMAIL_FROM` are configured. Reset links expire after one hour and can only be used once. Sign-in is limited to five failed attempts per IP/email pair in 15 minutes; enabling "Remember me" extends the session from eight hours to 30 days. Logging out invalidates all active sessions for that account.
 
-`npm run test:system` runs login, permission-map, committee-scope, geofence, late-status, and QR-token tests. A configured PostgreSQL instance is required to exercise database-backed routes or apply migrations. Excuse-request review, absence-warning policies, and richer attendance analytics/charts still need product configuration and UI work.
+Admins and Leaders can review role-scoped attendance reports at `/admin/reports`, including date and committee filters, attendance-rate charts, member summaries, and CSV export. Scheduled absence warnings are sent once a member reaches `ABSENCE_WARNING_THRESHOLD` unexcused completed sessions; the default is `3` and valid values are `1`–`100`.
+
+`npm run test:system` runs login, permission-map, committee-scope, geofence, late-status, absence-warning threshold, and QR-token tests. A configured PostgreSQL instance is required to exercise database-backed routes or apply migrations.

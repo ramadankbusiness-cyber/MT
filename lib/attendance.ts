@@ -19,3 +19,23 @@ export function isLate(checkedInAt: Date, startsAt: Date, lateAfterMinutes: numb
 export function isInsideZone(distanceMeters: number, accuracyMeters: number, radiusMeters: number): boolean {
   return distanceMeters + accuracyMeters <= radiusMeters;
 }
+
+export function getAbsenceWarningThreshold(value = process.env.ABSENCE_WARNING_THRESHOLD): number {
+  if (value === undefined || value.trim() === "") return 3;
+  const threshold = Number(value);
+  if (!Number.isInteger(threshold) || threshold < 1 || threshold > 100) {
+    throw new Error("ABSENCE_WARNING_THRESHOLD must be a whole number between 1 and 100.");
+  }
+  return threshold;
+}
+
+export function countUnexcusedAbsences(
+  eligibleSessionIds: readonly string[],
+  records: readonly { sessionId: string; status: string }[],
+): number {
+  const statusBySession = new Map(records.map((record) => [record.sessionId, record.status]));
+  return eligibleSessionIds.filter((sessionId) => {
+    const status = statusBySession.get(sessionId);
+    return status !== "PRESENT" && status !== "LATE" && status !== "EXCUSED";
+  }).length;
+}

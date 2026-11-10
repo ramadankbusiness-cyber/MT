@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { haversineMeters, isInsideZone, isLate } from "../../lib/attendance";
+import { countUnexcusedAbsences, getAbsenceWarningThreshold, haversineMeters, isInsideZone, isLate } from "../../lib/attendance";
 import { issueQrToken, verifyQrToken } from "../../lib/qr-token";
 import { canAccessCommittee, hasPermission } from "../../lib/permissions";
 
@@ -24,6 +24,25 @@ describe("attendance calculations", () => {
     const start = new Date("2026-01-01T10:00:00.000Z");
     expect(isLate(new Date("2026-01-01T10:10:00.000Z"), start, 10)).toBe(false);
     expect(isLate(new Date("2026-01-01T10:10:01.000Z"), start, 10)).toBe(true);
+  });
+
+  it("counts absent and unrecorded eligible sessions but excludes excused sessions", () => {
+    expect(countUnexcusedAbsences(
+      ["present", "late", "excused", "absent", "missing"],
+      [
+        { sessionId: "present", status: "PRESENT" },
+        { sessionId: "late", status: "LATE" },
+        { sessionId: "excused", status: "EXCUSED" },
+        { sessionId: "absent", status: "ABSENT" },
+      ],
+    )).toBe(2);
+  });
+
+  it("uses a bounded configurable absence warning threshold", () => {
+    expect(getAbsenceWarningThreshold("")).toBe(3);
+    expect(getAbsenceWarningThreshold("5")).toBe(5);
+    expect(() => getAbsenceWarningThreshold("0")).toThrow();
+    expect(() => getAbsenceWarningThreshold("2.5")).toThrow();
   });
 });
 

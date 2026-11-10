@@ -62,6 +62,7 @@ export function Navbar() {
                   <p>{session.user.name}</p>
                   <Link href="/dashboard" onClick={() => setAccountMenuOpen(false)}>Dashboard</Link>
                   <Link href="/attendance" onClick={() => setAccountMenuOpen(false)}>Attendance</Link>
+                  {(session.user.role === "ADMIN" || session.user.role === "LEADER") && <Link href="/admin/reports" onClick={() => setAccountMenuOpen(false)}>Attendance reports</Link>}
                   <Link href="/excuses" onClick={() => setAccountMenuOpen(false)}>Excuse requests</Link>
                   <Link href="/profile" onClick={() => setAccountMenuOpen(false)}>My profile</Link>
                   <Link href="/notifications" onClick={() => setAccountMenuOpen(false)}>Notifications</Link>
