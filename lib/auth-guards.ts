@@ -24,7 +24,7 @@ export async function getCurrentUser() {
 
 export async function requireUser() {
   const user = await getCurrentUser();
-  if (!user || !user.isActive) redirect("/login");
+  if (!user || !user.isActive) redirect("/login?message=login-required");
   if (user.mustChangePassword) redirect("/change-password");
   return user;
 }

@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
@@ -5,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { resetPasswordSchema } from "@/lib/schemas";
 import { writeAuditLog } from "@/lib/audit";
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = resetPasswordSchema.safeParse(body);
   if (!parsed.success) {
@@ -44,3 +45,5 @@ export async function POST(request: Request) {
   await writeAuditLog({ action: "user.password.reset.completed", targetType: "User", targetId: reset.userId });
   return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/auth/reset-password");

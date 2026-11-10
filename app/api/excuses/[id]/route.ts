@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
@@ -7,7 +8,7 @@ import { writeAuditLog } from "@/lib/audit";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function PATCH(request: Request, context: RouteContext) {
+async function PATCHInternal(request: Request, context: RouteContext) {
   const access = await requirePermission("excuses.review");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -57,3 +58,5 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
   return NextResponse.json({ excuse: updated });
 }
+
+export const PATCH = withApiErrorHandling(PATCHInternal, "/api/excuses/[id]");

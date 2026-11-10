@@ -5,12 +5,14 @@ import { X } from "lucide-react";
 import { CLUB_COMMITTEES } from "@/data/committees";
 import { joinApplicationSchema } from "@/lib/schemas";
 import { useSite } from "./site-provider";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type FormFields = { name: string; email: string; committees: string[]; message: string };
 const initialForm: FormFields = { name: "", email: "", committees: [], message: "" };
 
 export function JoinForm() {
   const { text } = useSite();
+  const showToast = useAppToast();
   const [form, setForm] = useState<FormFields>(initialForm);
   const [committeeChoice, setCommitteeChoice] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
@@ -41,6 +43,7 @@ export function JoinForm() {
     } catch {
       setStatus("error");
       setErrorMessage(text.join.error);
+      showToast(text.join.error);
     }
   }
 

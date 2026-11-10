@@ -9,7 +9,7 @@ export const metadata = { title: "Send notifications" };
 
 export default async function AdminNotificationsPage() {
   const access = await requirePermission("notifications.send");
-  if ("error" in access) redirect("/login");
+  if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const isAdmin = access.user.role === "ADMIN";
   const [committees, users] = await Promise.all([
     listClubCommittees(isAdmin ? undefined : access.user.committeeId),

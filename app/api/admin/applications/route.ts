@@ -1,9 +1,10 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { CLUB_COMMITTEES } from "@/data/committees";
 import { requirePermission } from "@/lib/auth-guards";
 
-export async function GET(request: Request) {
+async function GETInternal(request: Request) {
   const access = await requirePermission("applications.read");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
 
@@ -30,3 +31,5 @@ export async function GET(request: Request) {
   }
   return NextResponse.json({ applications: data ?? [] }, { headers: { "Cache-Control": "no-store" } });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/admin/applications");

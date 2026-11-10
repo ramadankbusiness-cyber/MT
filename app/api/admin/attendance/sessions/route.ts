@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
@@ -5,7 +6,7 @@ import { attendanceSessionSchema } from "@/lib/schemas";
 import { writeAuditLog } from "@/lib/audit";
 import { isClubCommitteeId } from "@/lib/committees";
 
-export async function GET() {
+async function GETInternal() {
   const access = await requirePermission("attendance.read.all");
   if ("error" in access) {
     const committeeAccess = await requirePermission("attendance.read.committee");
@@ -32,7 +33,7 @@ export async function GET() {
   return NextResponse.json({ sessions });
 }
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("attendance.sessions.create");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -55,3 +56,6 @@ export async function POST(request: Request) {
   await writeAuditLog({ actorId: access.user.id, action: "attendance.session.create", targetType: "AttendanceSession", targetId: session.id });
   return NextResponse.json({ session }, { status: 201 });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/admin/attendance/sessions");
+export const POST = withApiErrorHandling(POSTInternal, "/api/admin/attendance/sessions");

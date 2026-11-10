@@ -6,7 +6,7 @@ export const metadata = { title: "My profile" };
 
 export default async function ProfilePage() {
   const access = await requirePermission("profile.read.own");
-  if ("error" in access) redirect("/login");
+  if ("error" in access) redirect("/login?message=login-required");
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">

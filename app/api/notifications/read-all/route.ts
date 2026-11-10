@@ -1,8 +1,9 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 
-export async function POST() {
+async function POSTInternal() {
   const access = await requirePermission("notifications.manage.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   await prisma.notificationRecipient.updateMany({
@@ -11,3 +12,5 @@ export async function POST() {
   });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/notifications/read-all");

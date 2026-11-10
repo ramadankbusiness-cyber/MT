@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -10,7 +11,7 @@ import { isClubCommitteeId } from "@/lib/committees";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function PATCH(request: Request, context: RouteContext) {
+async function PATCHInternal(request: Request, context: RouteContext) {
   const access = await requirePermission("users.update");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const { id } = await context.params;
@@ -62,7 +63,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   return NextResponse.json({ user: updated });
 }
 
-export async function POST(_request: Request, context: RouteContext) {
+async function POSTInternal(_request: Request, context: RouteContext) {
   const access = await requirePermission("users.resetPassword");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const { id } = await context.params;
@@ -93,7 +94,7 @@ export async function POST(_request: Request, context: RouteContext) {
   return NextResponse.json({ temporaryPassword });
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+async function DELETEInternal(_request: Request, context: RouteContext) {
   const access = await requirePermission("users.delete");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const { id } = await context.params;
@@ -112,3 +113,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     throw error;
   }
 }
+
+export const PATCH = withApiErrorHandling(PATCHInternal, "/api/admin/users/[id]");
+export const POST = withApiErrorHandling(POSTInternal, "/api/admin/users/[id]");
+export const DELETE = withApiErrorHandling(DELETEInternal, "/api/admin/users/[id]");

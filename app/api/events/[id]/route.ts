@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessCommittee } from "@/lib/permissions";
@@ -8,7 +9,7 @@ import { isClubCommitteeId } from "@/lib/committees";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function PATCH(request: Request, context: RouteContext) {
+async function PATCHInternal(request: Request, context: RouteContext) {
   const access = await requirePermission("events.update");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const { id } = await context.params;
@@ -34,7 +35,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   return NextResponse.json({ event });
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+async function DELETEInternal(_request: Request, context: RouteContext) {
   const access = await requirePermission("events.delete");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const { id } = await context.params;
@@ -49,3 +50,6 @@ export async function DELETE(_request: Request, context: RouteContext) {
   await writeAuditLog({ actorId: access.user.id, action: "event.delete", targetType: "Event", targetId: id });
   return NextResponse.json({ ok: true });
 }
+
+export const PATCH = withApiErrorHandling(PATCHInternal, "/api/events/[id]");
+export const DELETE = withApiErrorHandling(DELETEInternal, "/api/events/[id]");

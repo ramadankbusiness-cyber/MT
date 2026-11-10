@@ -7,7 +7,7 @@ export const metadata = { title: "Audit log" };
 
 export default async function AuditLogPage() {
   const access = await requirePermission("audit.read");
-  if ("error" in access) redirect("/dashboard");
+  if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const entries = await prisma.auditLog.findMany({
     take: 100,
     orderBy: { createdAt: "desc" },

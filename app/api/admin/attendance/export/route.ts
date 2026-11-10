@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { requirePermission } from "@/lib/auth-guards";
 import { isClubCommitteeId } from "@/lib/committees";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +9,7 @@ function csvCell(value: string | number | null) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
-export async function GET(request: Request) {
+async function GETInternal(request: Request) {
   const adminAccess = await requirePermission("attendance.export");
   let actor;
   if ("error" in adminAccess) {
@@ -91,3 +92,5 @@ export async function GET(request: Request) {
     },
   });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/admin/attendance/export");

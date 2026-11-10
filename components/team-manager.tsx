@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { FormEvent, useState } from "react";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type Committee = { id: string; name: string };
 export type ManagedTeamMember = {
@@ -23,6 +24,7 @@ export type ManagedTeamMember = {
 const blank = { name: "", title: "", committeeId: "", bio: "", website: "", linkedin: "", instagram: "", photoUrl: "", visible: true };
 
 export function TeamManager({ initialMembers, committees }: { initialMembers: ManagedTeamMember[]; committees: Committee[] }) {
+  const showToast = useAppToast();
   const [members, setMembers] = useState(initialMembers);
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -78,8 +80,10 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
         ? current.map((member) => member.id === editingId ? result.member : member).sort((a, b) => a.order - b.order)
         : [...current, result.member].sort((a, b) => a.order - b.order));
       resetForm();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save this team member.");
+    } catch {
+      const errorMessage = "Could not save this team member. Please try again.";
+      setMessage(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }

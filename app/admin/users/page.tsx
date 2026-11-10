@@ -9,7 +9,7 @@ export const metadata = { title: "Manage accounts" };
 
 export default async function AdminUsersPage() {
   const access = await requirePermission("users.read");
-  if ("error" in access) redirect("/dashboard");
+  if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const [users, committees] = await Promise.all([
     prisma.user.findMany({
       orderBy: [{ role: "asc" }, { name: "asc" }],

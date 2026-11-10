@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type Committee = { id: string; name: string };
 export type ManagedEvent = {
@@ -19,6 +20,7 @@ const emptyForm = { title: "", description: "", startsAt: "", endsAt: "", locati
 const localInput = (date: string | Date | null) => date ? new Date(date).toISOString().slice(0, 16) : "";
 
 export function AdminEventManager({ initialEvents, committees, isAdmin }: { initialEvents: ManagedEvent[]; committees: Committee[]; isAdmin: boolean }) {
+  const showToast = useAppToast();
   const [events, setEvents] = useState(initialEvents);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,8 +58,10 @@ export function AdminEventManager({ initialEvents, committees, isAdmin }: { init
         : [...current, result.event].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()));
       setForm(emptyForm);
       setEditingId(null);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save this event.");
+    } catch {
+      const errorMessage = "Could not save this event. Please try again.";
+      setMessage(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }

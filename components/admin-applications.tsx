@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CLUB_COMMITTEES } from "@/data/committees";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type Application = {
   id: number;
@@ -13,6 +14,7 @@ type Application = {
 };
 
 export function AdminApplications() {
+  const showToast = useAppToast();
   const [applications, setApplications] = useState<Application[]>([]);
   const [committee, setCommittee] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,9 +31,11 @@ export function AdminApplications() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error ?? "Could not load applications.");
         setApplications(result.applications);
-      } catch (requestError) {
+      } catch {
         if (!controller.signal.aborted) {
-          setError(requestError instanceof Error ? requestError.message : "Could not load applications.");
+          const errorMessage = "Could not load applications. Please try again.";
+          setError(errorMessage);
+          showToast(errorMessage);
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -39,7 +43,7 @@ export function AdminApplications() {
     }
     void loadApplications();
     return () => controller.abort();
-  }, [committee]);
+  }, [committee, showToast]);
 
   return (
     <div className="admin-applications">

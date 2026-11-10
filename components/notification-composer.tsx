@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 type Audience = "EVERYONE" | "ROLE" | "COMMITTEE" | "USERS";
@@ -21,6 +22,7 @@ type HistoryItem = {
 const typeOptions = ["ANNOUNCEMENT", "NEW_EVENT", "EVENT_REMINDER", "SESSION_OPENED", "ATTENDANCE_CONFIRMED", "ATTENDANCE_REJECTED", "ABSENCE_WARNING", "ACCOUNT_CREATED", "PASSWORD_CHANGED", "ROLE_CHANGED", "EXCUSE_DECISION"];
 
 export function NotificationComposer({ role, committees, users }: { role: Role; committees: Committee[]; users: UserOption[] }) {
+  const showToast = useAppToast();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [link, setLink] = useState("");
@@ -72,8 +74,10 @@ export function NotificationComposer({ role, committees, users }: { role: Role; 
       setImportant(false);
       setPreview(false);
       await loadHistory();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Could not send this notification.");
+    } catch {
+      const errorMessage = "Could not send this notification. Please try again.";
+      setNotice(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }

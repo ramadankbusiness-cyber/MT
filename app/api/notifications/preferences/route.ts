@@ -1,10 +1,11 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { notificationPreferenceSchema } from "@/lib/schemas";
 
-export async function GET() {
+async function GETInternal() {
   const access = await requirePermission("notifications.manage.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const saved = await prisma.notificationPreference.findMany({ where: { userId: access.user.id } });
@@ -17,7 +18,7 @@ export async function GET() {
   });
 }
 
-export async function PATCH(request: Request) {
+async function PATCHInternal(request: Request) {
   const access = await requirePermission("notifications.manage.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -30,3 +31,6 @@ export async function PATCH(request: Request) {
   });
   return NextResponse.json({ preference });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/notifications/preferences");
+export const PATCH = withApiErrorHandling(PATCHInternal, "/api/notifications/preferences");

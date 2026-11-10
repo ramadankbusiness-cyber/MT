@@ -5,27 +5,9 @@ import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
 import { PwaRegistrar } from "@/components/pwa-registrar";
+import { AppToastProvider } from "@/components/app-toast-provider";
 import "leaflet/dist/leaflet.css";
-import { Cairo, Inter, Space_Grotesk } from "next/font/google";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  variable: "--font-space-grotesk",
-  display: "swap",
-});
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-inter",
-  display: "swap",
-});
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-cairo",
-  display: "swap",
-});
+import { cairo, inter, spaceGrotesk } from "./fonts";
 
 const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL
   || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -59,11 +41,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <SiteProvider>
           <AuthSessionProvider>
-            <PwaRegistrar />
-            <a className="skip-link" href="#main-content">Skip to main content</a>
-            <Navbar />
-            {children}
-            <Footer />
+            <AppToastProvider>
+              <PwaRegistrar />
+              <a className="skip-link" href="#main-content">Skip to main content</a>
+              <Navbar />
+              {children}
+              <Footer />
+            </AppToastProvider>
           </AuthSessionProvider>
         </SiteProvider>
       </body>

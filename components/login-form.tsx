@@ -6,12 +6,14 @@ import { FormEvent, useState } from "react";
 import { Eye, EyeOff, KeyRound, Mail, LoaderCircle } from "lucide-react";
 import { loginSchema } from "@/lib/schemas";
 import { getPostLoginPath, safeReturnPath } from "@/lib/login";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type LoginFormProps = { callbackUrl: string | null };
 type FieldErrors = { email?: string; password?: string };
 
 export function LoginForm({ callbackUrl }: LoginFormProps) {
   const router = useRouter();
+  const showToast = useAppToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -48,11 +50,14 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       });
       if (!result?.ok) {
         const code = result?.code ?? "";
-        if (code === "account-disabled") setMessage("Your account is disabled, contact the admin.");
+        let errorMessage: string;
+        if (code === "account-disabled") errorMessage = "Your account is disabled, contact the admin.";
         else if (code.startsWith("try-again-")) {
           const minutes = Number(code.slice("try-again-".length));
-          setMessage(`Try again in ${Number.isFinite(minutes) && minutes > 0 ? minutes : 15} minutes.`);
-        } else setMessage("Incorrect email or password");
+          errorMessage = `Try again in ${Number.isFinite(minutes) && minutes > 0 ? minutes : 15} minutes.`;
+        } else errorMessage = "Incorrect email or password";
+        setMessage(errorMessage);
+        showToast(errorMessage);
         return;
       }
 
@@ -60,7 +65,9 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       router.replace(getPostLoginPath(session?.user.mustChangePassword ?? false, safeCallback));
       router.refresh();
     } catch {
-      setMessage("We couldn’t log you in right now. Please try again.");
+      const errorMessage = "We couldn’t log you in right now. Please try again.";
+      setMessage(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }

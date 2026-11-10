@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
@@ -6,7 +7,7 @@ import { countUnreadForUser, dispatchPushNotification, isNotificationType } from
 import { writeAuditLog } from "@/lib/audit";
 import { isClubCommitteeId } from "@/lib/committees";
 
-export async function GET(request: Request) {
+async function GETInternal(request: Request) {
   const url = new URL(request.url);
   if (url.searchParams.get("sent") === "true") {
     const adminAccess = await requirePermission("notifications.manage");
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ notifications, unreadCount });
 }
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("notifications.send");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -131,3 +132,6 @@ export async function POST(request: Request) {
   if (!push.configured && !scheduledAt) console.warn("[Notifications] VAPID is not configured; push delivery was skipped.");
   return NextResponse.json({ notification, recipientCount: deliverUsers.length, pushConfigured: push.configured }, { status: 201 });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/notifications");
+export const POST = withApiErrorHandling(POSTInternal, "/api/notifications");

@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requirePermission } from "@/lib/auth-guards";
@@ -6,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { createImmediateNotification } from "@/lib/notification-delivery";
 import { isClubCommitteeId } from "@/lib/committees";
 
-export async function GET(request: Request) {
+async function GETInternal(request: Request) {
   const user = await getCurrentUser();
   const manage = new URL(request.url).searchParams.get("manage") === "true";
   if (manage) {
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ events, authenticated: !!user?.isActive });
 }
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("events.create");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -57,3 +58,6 @@ export async function POST(request: Request) {
   }
   return NextResponse.json({ event }, { status: 201 });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/events");
+export const POST = withApiErrorHandling(POSTInternal, "/api/events");

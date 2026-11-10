@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -38,10 +39,13 @@ async function runNotificationsCron(request: Request) {
   return NextResponse.json({ scheduled, reminders, pushRetries });
 }
 
-export async function GET(request: Request) {
+async function GETInternal(request: Request) {
   return runNotificationsCron(request);
 }
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   return runNotificationsCron(request);
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/cron/notifications");
+export const POST = withApiErrorHandling(POSTInternal, "/api/cron/notifications");

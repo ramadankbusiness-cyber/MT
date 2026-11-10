@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requirePermission } from "@/lib/auth-guards";
@@ -5,7 +6,7 @@ import { teamMemberSchema } from "@/lib/schemas";
 import { writeAuditLog } from "@/lib/audit";
 import { isClubCommitteeId } from "@/lib/committees";
 
-export async function GET() {
+async function GETInternal() {
   const user = await getCurrentUser();
   const members = await prisma.teamMember.findMany({
     where: user?.role === "ADMIN" && user.isActive && !user.mustChangePassword ? {} : { visible: true },
@@ -15,7 +16,7 @@ export async function GET() {
   return NextResponse.json({ members });
 }
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("team.manage");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ member }, { status: 201 });
 }
 
-export async function PATCH(request: Request) {
+async function PATCHInternal(request: Request) {
   const access = await requirePermission("team.manage");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -56,3 +57,7 @@ export async function PATCH(request: Request) {
   await writeAuditLog({ actorId: access.user.id, action: "team.reorder", targetType: "TeamMember", details: { count: orderedIds.length } });
   return NextResponse.json({ ok: true });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/team");
+export const POST = withApiErrorHandling(POSTInternal, "/api/team");
+export const PATCH = withApiErrorHandling(PATCHInternal, "/api/team");

@@ -1,10 +1,11 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { excuseSchema } from "@/lib/schemas";
 import { writeAuditLog } from "@/lib/audit";
 
-export async function GET() {
+async function GETInternal() {
   const adminAccess = await requirePermission("excuses.read.all");
   if ("error" in adminAccess) {
     const leaderAccess = await requirePermission("excuses.read.committee");
@@ -33,7 +34,7 @@ export async function GET() {
   return NextResponse.json({ excuses });
 }
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("excuses.create.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -58,3 +59,6 @@ export async function POST(request: Request) {
     throw error;
   }
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/excuses");
+export const POST = withApiErrorHandling(POSTInternal, "/api/excuses");

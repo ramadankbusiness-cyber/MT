@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-guards";
@@ -9,13 +10,13 @@ const profileSchema = z.object({
   phone: z.string().trim().max(40).optional().nullable(),
 });
 
-export async function GET() {
+async function GETInternal() {
   const user = await getCurrentUser();
   if (!user?.isActive) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({ user });
 }
 
-export async function PATCH(request: Request) {
+async function PATCHInternal(request: Request) {
   const user = await getCurrentUser();
   if (!user?.isActive) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body: unknown = await request.json().catch(() => null);
@@ -29,3 +30,6 @@ export async function PATCH(request: Request) {
   await writeAuditLog({ actorId: user.id, action: "profile.update", targetType: "User", targetId: user.id });
   return NextResponse.json({ user: updated });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/profile");
+export const PATCH = withApiErrorHandling(PATCHInternal, "/api/profile");

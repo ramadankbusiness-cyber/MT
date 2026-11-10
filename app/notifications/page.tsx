@@ -6,7 +6,7 @@ export const metadata = { title: "Notifications" };
 
 export default async function NotificationsPage() {
   const access = await requirePermission("notifications.read");
-  if ("error" in access) redirect("/login");
+  if ("error" in access) redirect("/login?message=login-required");
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">

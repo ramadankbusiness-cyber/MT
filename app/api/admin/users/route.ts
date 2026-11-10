@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +9,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { dispatchPushNotification } from "@/lib/notification-delivery";
 import { isClubCommitteeId, listClubCommittees } from "@/lib/committees";
 
-export async function GET() {
+async function GETInternal() {
   const access = await requirePermission("users.read");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const [users, committees] = await Promise.all([
@@ -21,7 +22,7 @@ export async function GET() {
   return NextResponse.json({ users, committees });
 }
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("users.create");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -64,3 +65,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not create the account." }, { status: 500 });
   }
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/admin/users");
+export const POST = withApiErrorHandling(POSTInternal, "/api/admin/users");

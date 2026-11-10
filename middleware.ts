@@ -9,6 +9,7 @@ export async function middleware(request: NextRequest) {
     const callbackUrl = safeReturnPath(`${request.nextUrl.pathname}${request.nextUrl.search}`);
     const loginUrl = new URL("/login", request.url);
     if (callbackUrl) loginUrl.searchParams.set("callbackUrl", callbackUrl);
+    loginUrl.searchParams.set("message", "login-required");
     return NextResponse.redirect(loginUrl);
   }
   if (token.mustChangePassword && request.nextUrl.pathname !== "/change-password") {

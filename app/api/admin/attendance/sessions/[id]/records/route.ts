@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
@@ -6,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function POST(request: Request, context: RouteContext) {
+async function POSTInternal(request: Request, context: RouteContext) {
   const access = await requirePermission("attendance.manualMark");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -44,3 +45,5 @@ export async function POST(request: Request, context: RouteContext) {
   });
   return NextResponse.json({ record });
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/admin/attendance/sessions/[id]/records");

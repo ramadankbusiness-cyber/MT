@@ -6,7 +6,7 @@ export const metadata = { title: "Membership applications" };
 
 export default async function AdminApplicationsPage() {
   const access = await requirePermission("applications.read");
-  if ("error" in access) redirect("/dashboard");
+  if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">

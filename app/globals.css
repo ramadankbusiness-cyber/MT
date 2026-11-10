@@ -588,6 +588,129 @@ h1, h2, h3, p { margin-top: 0; }
 .login-submit { width: 100%; min-height: 48px; margin-top: 2px; }
 .login-submit:disabled { transform: none; box-shadow: none; cursor: wait; opacity: .72; }
 .login-spinner { animation: login-spin .8s linear infinite; }
+
+.branded-error {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  overflow: hidden;
+  place-items: center;
+  padding: 48px 24px;
+  isolation: isolate;
+  animation: page-enter .5s ease both;
+}
+.error-orb {
+  position: absolute;
+  z-index: -1;
+  width: min(520px, 85vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: .25;
+  pointer-events: none;
+}
+.error-orb-a { top: -15%; left: -12%; background: var(--a); }
+.error-orb-b { right: -12%; bottom: -18%; background: var(--b); }
+.error-content {
+  display: flex;
+  width: min(100%, 620px);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.error-robot {
+  width: 260px;
+  height: auto;
+  margin-bottom: 12px;
+  object-fit: contain;
+  animation: error-float 4s ease-in-out infinite;
+}
+.error-code {
+  margin: 0;
+  background: linear-gradient(120deg, var(--a), var(--b));
+  background-clip: text;
+  color: transparent;
+  font-family: var(--heading-font);
+  font-size: clamp(42px, 9vw, 72px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+.error-content h1 {
+  margin: 14px 0 0;
+  font-family: var(--heading-font);
+  font-size: clamp(28px, 5vw, 40px);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.08;
+}
+.error-message {
+  max-width: 440px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+.error-reference { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+.error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 26px; }
+.error-report { margin-top: 22px; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.error-report:hover { color: var(--ink); }
+.login-notice {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 13px;
+}
+.app-toast {
+  position: fixed;
+  z-index: 120;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  max-width: min(420px, calc(100vw - 40px));
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 40px var(--glow);
+  font-size: 14px;
+  animation: page-enter .2s ease both;
+}
+.loading-page {
+  display: flex;
+  width: min(1120px, calc(100% - 48px));
+  min-height: 65vh;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  margin: 0 auto;
+  padding-block: 48px;
+}
+.loading-skeleton {
+  border-radius: 16px;
+  background: linear-gradient(90deg, var(--line), var(--surface), var(--line));
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.loading-heading { width: min(440px, 85%); height: 54px; }
+.loading-copy { width: min(620px, 92%); height: 16px; }
+.loading-copy-short { width: min(390px, 72%); }
+.loading-card { width: min(720px, 100%); height: 180px; margin-top: 20px; border: 1px solid var(--line); }
+@keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+@keyframes error-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@media (max-width: 600px) {
+  .branded-error { padding: 32px 20px; }
+  .error-robot { width: 200px; margin-bottom: 8px; }
+  .error-actions { width: 100%; }
+  .error-actions .button { min-width: 145px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .branded-error { animation: none; }
+  .error-robot { animation: none; }
+  .loading-skeleton { animation: none; }
+}
 .login-footnote { margin: 23px 0 0; color: var(--muted); font-size: 11px; text-align: center; }
 .login-inline-link { display: inline-flex; justify-content: center; margin-top: 18px; color: var(--accent-strong); font-size: 12px; font-weight: 600; }
 .login-inline-link:hover { text-decoration: underline; text-underline-offset: 3px; }

@@ -1,9 +1,10 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { pushSubscriptionSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("notifications.manage.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ subscriptionId: subscription.id }, { status: 201 });
 }
 
-export async function DELETE(request: Request) {
+async function DELETEInternal(request: Request) {
   const access = await requirePermission("notifications.manage.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -39,3 +40,6 @@ export async function DELETE(request: Request) {
   await prisma.pushSubscription.deleteMany({ where: { endpoint: body.endpoint, userId: access.user.id } });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/push/subscriptions");
+export const DELETE = withApiErrorHandling(DELETEInternal, "/api/push/subscriptions");

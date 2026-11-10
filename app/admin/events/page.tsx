@@ -9,7 +9,7 @@ export const metadata = { title: "Manage events" };
 
 export default async function AdminEventsPage() {
   const access = await requirePermission("events.create");
-  if ("error" in access) redirect("/login");
+  if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const isAdmin = access.user.role === "ADMIN";
   const [events, committees] = await Promise.all([
     prisma.event.findMany({

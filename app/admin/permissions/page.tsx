@@ -6,7 +6,7 @@ export const metadata = { title: "Permissions matrix" };
 
 export default async function PermissionsPage() {
   const access = await requirePermission("permissions.read");
-  if ("error" in access) redirect("/dashboard");
+  if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const rows = permissionRows();
   const permissions = [...new Set(rows.flatMap((row) => row.permissions))].sort();
   return (

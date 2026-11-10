@@ -32,7 +32,7 @@ export default async function AttendanceReportsPage({ searchParams }: { searchPa
   let actor;
   if ("error" in allAccess) {
     const committeeAccess = await requirePermission("attendance.read.committee");
-    if ("error" in committeeAccess) redirect("/dashboard");
+    if ("error" in committeeAccess) redirect(committeeAccess.status === 401 ? "/login?message=login-required" : "/forbidden");
     actor = committeeAccess.user;
   } else {
     actor = allAccess.user;

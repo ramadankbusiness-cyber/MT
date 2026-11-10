@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 type Zone = { id: string; name: string };
@@ -42,6 +43,7 @@ export function AttendanceTools({
 }
 
 function SessionManager({ sessions: initialSessions, zones, committees, members, isAdmin }: { sessions: AttendanceSessionView[]; zones: Zone[]; committees: Committee[]; members: AttendanceMember[]; isAdmin: boolean }) {
+  const showToast = useAppToast();
   const [sessions, setSessions] = useState(initialSessions);
   const [title, setTitle] = useState("");
   const [zoneId, setZoneId] = useState(zones[0]?.id ?? "");
@@ -80,8 +82,10 @@ function SessionManager({ sessions: initialSessions, zones, committees, members,
       setStartsAt("");
       setEndsAt("");
       setMessage("Attendance session created.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not create the session.");
+    } catch {
+      const errorMessage = "Could not create the session. Please try again.";
+      setMessage(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }
@@ -247,6 +251,7 @@ function AttendanceQr({ session }: { session: AttendanceSessionView }) {
 }
 
 function MemberAttendance({ records, attendanceRate }: { records: AttendanceRecordView[]; attendanceRate: number }) {
+  const showToast = useAppToast();
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -292,11 +297,15 @@ function MemberAttendance({ records, attendanceRate }: { records: AttendanceReco
     } catch (error) {
       const geolocationError = error as GeolocationPositionError;
       if (typeof geolocationError.code === "number") {
-        setMessage(geolocationError.code === geolocationError.PERMISSION_DENIED
+        const errorMessage = geolocationError.code === geolocationError.PERMISSION_DENIED
           ? "Location access was denied. Allow location for this site in your browser settings, then scan again."
-          : "Could not get a precise location. Enable device location services and try again.");
+          : "Could not get a precise location. Enable device location services and try again.";
+        setMessage(errorMessage);
+        showToast(errorMessage);
       } else {
-        setMessage(error instanceof Error ? error.message : "Could not check in.");
+        const errorMessage = "Could not check in. Please try again.";
+        setMessage(errorMessage);
+        showToast(errorMessage);
       }
     } finally {
       setBusy(false);

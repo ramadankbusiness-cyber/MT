@@ -4,12 +4,14 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, Mail } from "lucide-react";
 import { forgotPasswordSchema, resetPasswordSchema } from "@/lib/schemas";
+import { useAppToast } from "@/components/app-toast-provider";
 
 function isValidPassword(value: string) {
   return resetPasswordSchema.shape.newPassword.safeParse(value).success;
 }
 
 export function ForgotPasswordForm() {
+  const showToast = useAppToast();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -33,7 +35,9 @@ export function ForgotPasswordForm() {
       if (!response.ok) throw new Error("Reset request failed");
       setSent(true);
     } catch {
-      setError("We couldn’t process your request right now. Please try again.");
+      const errorMessage = "We couldn’t process your request right now. Please try again.";
+      setError(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }
@@ -62,6 +66,7 @@ export function ForgotPasswordForm() {
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
+  const showToast = useAppToast();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -83,13 +88,17 @@ export function ResetPasswordForm({ token }: { token: string }) {
       });
       const result = await response.json();
       if (!response.ok) {
-        setError(result.error ?? "This reset link is invalid or expired.");
+        const errorMessage = result.error ?? "This reset link is invalid or expired.";
+        setError(errorMessage);
+        showToast(errorMessage);
         return;
       }
       setDone(true);
       window.setTimeout(() => router.replace("/login"), 1200);
     } catch {
-      setError("We couldn’t reset your password right now. Please try again.");
+      const errorMessage = "We couldn’t reset your password right now. Please try again.";
+      setError(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }

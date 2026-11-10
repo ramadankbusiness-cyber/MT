@@ -9,7 +9,7 @@ export const metadata = { title: "Attendance zones" };
 
 export default async function AdminZonesPage() {
   const access = await requirePermission("zones.manage");
-  if ("error" in access) redirect("/dashboard");
+  if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const [zones, committees] = await Promise.all([
     prisma.zone.findMany({ include: { committee: { select: { name: true } } }, orderBy: { name: "asc" } }),
     listClubCommittees(),

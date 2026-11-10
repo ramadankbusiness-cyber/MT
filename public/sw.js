@@ -1,3 +1,25 @@
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open("mt-club-offline-v1").then((cache) => cache.addAll([
+    "/offline",
+    "/robot-error.png",
+  ])));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.method !== "GET" || request.mode !== "navigate") return;
+  event.respondWith(fetch(request).catch(async () => {
+    const cache = await caches.open("mt-club-offline-v1");
+    const offline = await cache.match("/offline");
+    return offline ?? Response.error();
+  }));
+});
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
   const payload = event.data.json();

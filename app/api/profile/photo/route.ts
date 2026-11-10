@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth-guards";
 import { ImageUploadError, uploadClubImage } from "@/lib/image-storage";
@@ -6,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("profile.update.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const formData = await request.formData();
@@ -23,3 +24,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not upload that photo." }, { status: 500 });
   }
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/profile/photo");

@@ -1,10 +1,11 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { getCurrentUser } from "@/lib/auth-guards";
 import { countUnreadForUser } from "@/lib/notification-delivery";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
+async function GETInternal() {
   const user = await getCurrentUser();
   if (!user?.isActive || user.mustChangePassword) return new Response("Unauthorized", { status: 401 });
 
@@ -51,3 +52,5 @@ export async function GET() {
     },
   });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/notifications/stream");

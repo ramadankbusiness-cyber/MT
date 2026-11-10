@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { FormEvent, useState } from "react";
+import { useAppToast } from "@/components/app-toast-provider";
 
 const ZoneMapPicker = dynamic(() => import("./zone-map-picker"), { ssr: false, loading: () => <div className="zone-map-loading">Loading OpenStreetMap…</div> });
 type Committee = { id: string; name: string };
@@ -9,6 +10,7 @@ type Zone = { id: string; name: string; latitude: number; longitude: number; rad
 const defaultPoint = { latitude: 30.0444, longitude: 31.2357 };
 
 export function AdminZoneManager({ initialZones, committees }: { initialZones: Zone[]; committees: Committee[] }) {
+  const showToast = useAppToast();
   const [zones, setZones] = useState(initialZones);
   const [name, setName] = useState("");
   const [point, setPoint] = useState(defaultPoint);
@@ -50,8 +52,10 @@ export function AdminZoneManager({ initialZones, committees }: { initialZones: Z
         ? current.map((zone) => zone.id === editingId ? result.zone : zone)
         : [...current, result.zone]);
       clearForm();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save this zone.");
+    } catch {
+      const errorMessage = "Could not save this zone. Please try again.";
+      setMessage(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }

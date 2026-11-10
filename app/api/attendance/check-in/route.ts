@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { AttendanceAttemptStatus, AttendanceStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -10,7 +11,7 @@ import { verifyQrToken } from "@/lib/qr-token";
 const recentTimestampWindowMs = 2 * 60 * 1000;
 const suspiciousAccuracyMeters = 75;
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const access = await requirePermission("attendance.scan.own");
   if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
   const body: unknown = await request.json().catch(() => null);
@@ -115,3 +116,5 @@ export async function POST(request: Request) {
     throw error;
   }
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/attendance/check-in");

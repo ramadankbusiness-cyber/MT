@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAppToast } from "@/components/app-toast-provider";
 
 function decodeKey(value: string) {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -9,6 +10,7 @@ function decodeKey(value: string) {
 }
 
 export function PushSettings() {
+  const showToast = useAppToast();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [enabled, setEnabled] = useState(false);
@@ -39,8 +41,10 @@ export function PushSettings() {
       if (!response.ok) throw new Error(result.error ?? "Could not enable push notifications.");
       setEnabled(true);
       setMessage("Push notifications are enabled on this device.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not enable push notifications.");
+    } catch {
+      const errorMessage = "Could not enable push notifications. Please try again.";
+      setMessage(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }

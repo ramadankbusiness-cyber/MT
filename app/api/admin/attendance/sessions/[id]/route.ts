@@ -1,10 +1,11 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+async function GETInternal(_request: Request, context: RouteContext) {
   const adminAccess = await requirePermission("attendance.read.all");
   let actor;
   if ("error" in adminAccess) {
@@ -40,3 +41,5 @@ export async function GET(_request: Request, context: RouteContext) {
   ]);
   return NextResponse.json({ session, records, attempts });
 }
+
+export const GET = withApiErrorHandling(GETInternal, "/api/admin/attendance/sessions/[id]");

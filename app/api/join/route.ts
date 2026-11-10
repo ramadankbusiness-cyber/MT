@@ -1,8 +1,9 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { joinApplicationSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = joinApplicationSchema.safeParse(body);
   if (!parsed.success) {
@@ -55,3 +56,5 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true, forwarded: false }, { status: 201 });
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/join");

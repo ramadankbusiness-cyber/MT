@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,7 @@ const genericResponse = () => NextResponse.json(
   { headers: { "Cache-Control": "no-store" } },
 );
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = forgotPasswordSchema.safeParse(body);
   if (!parsed.success) return genericResponse();
@@ -56,3 +57,5 @@ export async function POST(request: Request) {
 
   return genericResponse();
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/auth/forgot-password");

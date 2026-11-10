@@ -1,3 +1,4 @@
+import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getCurrentUser } from "@/lib/auth-guards";
@@ -6,7 +7,7 @@ import { passwordSchema } from "@/lib/schemas";
 import { writeAuditLog } from "@/lib/audit";
 import { createImmediateNotification } from "@/lib/notification-delivery";
 
-export async function POST(request: Request) {
+async function POSTInternal(request: Request) {
   const user = await getCurrentUser();
   if (!user?.isActive) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body: unknown = await request.json().catch(() => null);
@@ -33,3 +34,5 @@ export async function POST(request: Request) {
   });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withApiErrorHandling(POSTInternal, "/api/auth/change-password");

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useAppToast } from "@/components/app-toast-provider";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 type Committee = { id: string; name: string };
@@ -19,6 +20,7 @@ const initialForm = { name: "", email: "", role: "MEMBER" as Role, committeeId: 
 const parseRole = (value: string): Role => value === "ADMIN" || value === "LEADER" || value === "MEMBER" ? value : "MEMBER";
 
 export function AdminUserManager({ initialUsers, committees }: { initialUsers: AdminUserRow[]; committees: Committee[] }) {
+  const showToast = useAppToast();
   const [users, setUsers] = useState(initialUsers);
   const [form, setForm] = useState(initialForm);
   const [busy, setBusy] = useState(false);
@@ -43,8 +45,10 @@ export function AdminUserManager({ initialUsers, committees }: { initialUsers: A
       setTemporaryPassword(result.temporaryPassword);
       setMessage(`Account created for ${result.user.email}. Share this temporary password securely.`);
       setForm(initialForm);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not create the account.");
+    } catch {
+      const errorMessage = "Could not create the account. Please try again.";
+      setMessage(errorMessage);
+      showToast(errorMessage);
     } finally {
       setBusy(false);
     }
