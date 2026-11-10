@@ -3,11 +3,19 @@ import { AdminEventManager } from "@/components/admin-event-manager";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { listClubCommittees } from "@/lib/committees";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Manage events" };
+type Props = { params: Promise<{ locale: string }> };
 
-export default async function AdminEventsPage() {
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  return { title: locale === "ar" ? "إدارة الفعاليات" : "Manage events" };
+}
+
+export default async function AdminEventsPage({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "site.adminCommunication.events" });
   const access = await requirePermission("events.create");
   if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const isAdmin = access.user.role === "ADMIN";
@@ -22,7 +30,7 @@ export default async function AdminEventsPage() {
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
-        <div className="section-heading"><p className="eyebrow">CLUB CALENDAR</p><h1>Manage events</h1><p className="section-lead">Publish club events, manage committee visibility, and keep the calendar current.</p></div>
+        <div className="section-heading"><p className="eyebrow">{t("eyebrow")}</p><h1>{t("title")}</h1><p className="section-lead">{t("lead")}</p></div>
         <AdminEventManager initialEvents={events} committees={committees} isAdmin={isAdmin} />
       </section>
     </main>

@@ -3,11 +3,19 @@ import { NotificationComposer } from "@/components/notification-composer";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { listClubCommittees } from "@/lib/committees";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Send notifications" };
+type Props = { params: Promise<{ locale: string }> };
 
-export default async function AdminNotificationsPage() {
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  return { title: locale === "ar" ? "إرسال الإشعارات" : "Send notifications" };
+}
+
+export default async function AdminNotificationsPage({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "site.adminCommunication.notifications" });
   const access = await requirePermission("notifications.send");
   if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const isAdmin = access.user.role === "ADMIN";
@@ -22,7 +30,7 @@ export default async function AdminNotificationsPage() {
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
-        <div className="section-heading"><p className="eyebrow">CLUB COMMUNICATIONS</p><h1>Notifications</h1><p className="section-lead">Send in-app and push updates, preview the message, or schedule it for later.</p></div>
+        <div className="section-heading"><p className="eyebrow">{t("eyebrow")}</p><h1>{t("title")}</h1><p className="section-lead">{t("lead")}</p></div>
         <NotificationComposer role={access.user.role} committees={committees} users={users} />
       </section>
     </main>

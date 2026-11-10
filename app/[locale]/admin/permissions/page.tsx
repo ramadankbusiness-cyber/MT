@@ -1,10 +1,19 @@
 import { redirect } from "next/navigation";
 import { permissionRows } from "@/lib/permissions";
 import { requirePermission } from "@/lib/auth-guards";
+import { getTranslations } from "next-intl/server";
 
-export const metadata = { title: "Permissions matrix" };
+type Props = { params: Promise<{ locale: string }> };
 
-export default async function PermissionsPage() {
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  return { title: locale === "ar" ? "مصفوفة الصلاحيات" : "Permissions matrix" };
+}
+
+export default async function PermissionsPage({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "site.adminPages.permissions" });
+  const rolesT = await getTranslations({ locale, namespace: "site.adminPages.users" });
   const access = await requirePermission("permissions.read");
   if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const rows = permissionRows();
@@ -12,10 +21,10 @@ export default async function PermissionsPage() {
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
-        <div className="section-heading"><p className="eyebrow">ADMINISTRATION</p><h1>Permissions matrix</h1><p className="section-lead">A read-only view of the centrally enforced capabilities for each account role.</p></div>
+        <div className="section-heading"><p className="eyebrow">{t("eyebrow")}</p><h1>{t("title")}</h1><p className="section-lead">{t("lead")}</p></div>
         <div className="permissions-table-wrap"><table className="permissions-table">
-          <thead><tr><th scope="col">Capability</th>{rows.map((row) => <th scope="col" key={row.role}>{row.role}</th>)}</tr></thead>
-          <tbody>{permissions.map((permission) => <tr key={permission}><th scope="row">{permission.replaceAll(".", " · ")}</th>{rows.map((row) => <td key={row.role}>{new Set<string>(row.permissions).has(permission) ? <span className="permission-yes" aria-label="Allowed">✓</span> : <span aria-label="Not allowed">—</span>}</td>)}</tr>)}</tbody>
+          <thead><tr><th scope="col">{t("capability")}</th>{rows.map((row) => <th scope="col" key={row.role}>{rolesT(row.role === "ADMIN" ? "admin" : row.role === "LEADER" ? "leader" : "member")}</th>)}</tr></thead>
+          <tbody>{permissions.map((permission) => <tr key={permission}><th scope="row">{permission.replaceAll(".", " · ")}</th>{rows.map((row) => <td key={row.role}>{new Set<string>(row.permissions).has(permission) ? <span className="permission-yes" aria-label={t("allowed")}>✓</span> : <span aria-label={t("denied")}>—</span>}</td>)}</tr>)}</tbody>
         </table></div>
       </section>
     </main>

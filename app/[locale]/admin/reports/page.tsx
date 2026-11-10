@@ -3,9 +3,10 @@ import { AttendanceReports } from "@/components/attendance-reports";
 import { requirePermission } from "@/lib/auth-guards";
 import { listClubCommittees } from "@/lib/committees";
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Attendance reports" };
+type Props = { params: Promise<{ locale: string }>; searchParams: SearchParams };
 
 type SearchParams = Promise<{
   from?: string | string[];
@@ -27,7 +28,14 @@ function dateInputValue(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-export default async function AttendanceReportsPage({ searchParams }: { searchParams: SearchParams }) {
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  return { title: locale === "ar" ? "تقارير الحضور" : "Attendance reports" };
+}
+
+export default async function AttendanceReportsPage({ params, searchParams }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "site.adminPages.reports" });
   const allAccess = await requirePermission("attendance.read.all");
   let actor;
   if ("error" in allAccess) {
@@ -146,9 +154,9 @@ export default async function AttendanceReportsPage({ searchParams }: { searchPa
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
         <div className="section-heading">
-          <p className="eyebrow">ATTENDANCE</p>
-          <h1>Attendance reports</h1>
-          <p className="section-lead">Review participation by member, committee, and date range.</p>
+          <p className="eyebrow">{t("eyebrow")}</p>
+          <h1>{t("title")}</h1>
+          <p className="section-lead">{t("lead")}</p>
         </div>
         <AttendanceReports
           from={dateInputValue(rangeStart)}

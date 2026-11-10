@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CLUB_COMMITTEES } from "@/data/committees";
 import { useAppToast } from "@/components/app-toast-provider";
+import { useLocale, useTranslations } from "next-intl";
 
 type Application = {
   id: number;
@@ -14,6 +15,8 @@ type Application = {
 };
 
 export function AdminApplications() {
+  const t = useTranslations("site.adminPages.applications");
+  const locale = useLocale();
   const showToast = useAppToast();
   const [applications, setApplications] = useState<Application[]>([]);
   const [committee, setCommittee] = useState("");
@@ -29,11 +32,11 @@ export function AdminApplications() {
         const query = committee ? `?committee=${encodeURIComponent(committee)}` : "";
         const response = await fetch(`/api/admin/applications${query}`, { signal: controller.signal });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error ?? "Could not load applications.");
+        if (!response.ok) throw new Error("load-failed");
         setApplications(result.applications);
       } catch {
         if (!controller.signal.aborted) {
-          const errorMessage = "Could not load applications. Please try again.";
+          const errorMessage = t("loadError");
           setError(errorMessage);
           showToast(errorMessage);
         }
@@ -48,28 +51,28 @@ export function AdminApplications() {
   return (
     <div className="admin-applications">
       <div className="application-filter">
-        <label htmlFor="application-committee-filter">Filter by committee</label>
+        <label htmlFor="application-committee-filter">{t("filter")}</label>
         <select id="application-committee-filter" value={committee} onChange={(event) => setCommittee(event.target.value)}>
-          <option value="">All committees</option>
+          <option value="">{t("all")}</option>
           {CLUB_COMMITTEES.map((item) => <option value={item} key={item}>{item}</option>)}
         </select>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
-      {loading ? <p className="empty-note" role="status">Loading applications…</p> : (
+      {loading ? <p className="empty-note" role="status">{t("loading")}</p> : (
         <div className="application-list">
           {applications.map((application) => (
             <article className="application-card" key={application.id}>
               <div className="application-card-heading">
                 <div><h2>{application.name}</h2><a href={`mailto:${application.email}`}>{application.email}</a></div>
-                <time dateTime={application.created_at}>{new Date(application.created_at).toLocaleDateString()}</time>
+                <time dateTime={application.created_at}>{new Date(application.created_at).toLocaleDateString(locale)}</time>
               </div>
-              <ul className="join-committee-pills application-committee-pills" aria-label="Selected committees">
+              <ul className="join-committee-pills application-committee-pills" aria-label={t("selected")}>
                 {application.committees.map((item) => <li key={item}><span>{item}</span></li>)}
               </ul>
               <p>{application.message}</p>
             </article>
           ))}
-          {!applications.length && !error && <p className="empty-note">No applications found for this committee.</p>}
+          {!applications.length && !error && <p className="empty-note">{t("empty")}</p>}
         </div>
       )}
     </div>
