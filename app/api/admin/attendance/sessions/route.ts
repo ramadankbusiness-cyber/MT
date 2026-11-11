@@ -39,15 +39,17 @@ async function POSTInternal(request: Request) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = attendanceSessionSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Check the attendance session details." }, { status: 400 });
-  const [zone, committee] = await Promise.all([
-    prisma.zone.findUnique({ where: { id: parsed.data.zoneId }, select: { id: true } }),
-    parsed.data.committeeId ? isClubCommitteeId(parsed.data.committeeId) : Promise.resolve(true),
-  ]);
-  if (!zone) return NextResponse.json({ error: "Choose an existing attendance zone." }, { status: 400 });
-  if (!committee) return NextResponse.json({ error: "Choose an existing committee." }, { status: 400 });
+  const accessUser = access.user;
+  const committeeId = accessUser.role === "LEADER" ? accessUser.committeeId : parsed.data.committeeId ?? null;
+  if (accessUser.role === "LEADER" && !committeeId) {
+    return NextResponse.json({ error: "Your account must be assigned to a committee." }, { status: 403 });
+  }
+  if (committeeId && !(await isClubCommitteeId(committeeId))) {
+    return NextResponse.json({ error: "Choose an existing committee." }, { status: 400 });
+  }
 
   const session = await prisma.attendanceSession.create({
-    data: { ...parsed.data, createdById: access.user.id },
+    data: { ...parsed.data, committeeId, createdById: access.user.id },
     include: {
       committee: { select: { id: true, name: true } },
       zone: { select: { id: true, name: true, latitude: true, longitude: true, radiusMeters: true } },

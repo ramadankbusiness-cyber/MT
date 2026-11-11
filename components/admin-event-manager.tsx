@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useLocale, useTranslations } from "next-intl";
 import { getCommitteeLabel } from "@/data/committees";
+import ZoneCapture, { type ZoneCaptureValue } from "@/components/zone-capture";
 
 type Committee = { id: string; name: string };
 export type ManagedEvent = {
@@ -18,9 +19,29 @@ export type ManagedEvent = {
   committeeId: string | null;
   committee: { id: string; name: string } | null;
   published: boolean;
+  centerLat: number;
+  centerLng: number;
+  radiusMeters: number;
+  locationAccuracy: number | null;
+  placeName: string | null;
 };
 
-const emptyForm = { title: "", titleAr: "", description: "", descriptionAr: "", startsAt: "", endsAt: "", location: "", committeeId: "", published: true };
+const emptyForm = {
+  title: "",
+  titleAr: "",
+  description: "",
+  descriptionAr: "",
+  startsAt: "",
+  endsAt: "",
+  location: "",
+  committeeId: "",
+  published: true,
+  centerLat: 30.0444,
+  centerLng: 31.2357,
+  radiusMeters: 100,
+  locationAccuracy: null as number | null,
+  placeName: null as string | null,
+};
 const localInput = (date: string | Date | null) => date ? new Date(date).toISOString().slice(0, 16) : "";
 
 export function AdminEventManager({ initialEvents, committees, isAdmin }: { initialEvents: ManagedEvent[]; committees: Committee[]; isAdmin: boolean }) {
@@ -33,14 +54,16 @@ export function AdminEventManager({ initialEvents, committees, isAdmin }: { init
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [formLanguage, setFormLanguage] = useState<"en" | "ar">("en");
+  const [zoneValue, setZoneValue] = useState<ZoneCaptureValue>({ latitude: 30.0444, longitude: 31.2357, radiusMeters: 100, accuracy: null, placeName: null, saveAsZone: false, zoneName: null, zoneId: null });
 
   function editEvent(event: ManagedEvent) {
     setEditingId(event.id);
     setForm({
       title: event.title, titleAr: event.titleAr ?? "", description: event.description, descriptionAr: event.descriptionAr ?? "", startsAt: localInput(event.startsAt),
-      endsAt: localInput(event.endsAt), location: event.location ?? "", committeeId: event.committeeId ?? "",
-      published: event.published,
+      endsAt: localInput(event.endsAt), location: event.location ?? "", committeeId: event.committeeId ?? "", published: event.published,
+      centerLat: event.centerLat ?? 30.0444, centerLng: event.centerLng ?? 31.2357, radiusMeters: event.radiusMeters ?? 100, locationAccuracy: event.locationAccuracy ?? null, placeName: event.placeName ?? null,
     });
+    setZoneValue({ latitude: event.centerLat ?? 30.0444, longitude: event.centerLng ?? 31.2357, radiusMeters: event.radiusMeters ?? 100, accuracy: event.locationAccuracy ?? null, placeName: event.placeName ?? null, saveAsZone: false, zoneName: null, zoneId: null });
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -52,6 +75,8 @@ export function AdminEventManager({ initialEvents, committees, isAdmin }: { init
         ...form, startsAt: new Date(form.startsAt).toISOString(),
         endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
         location: form.location || null, committeeId: isAdmin ? form.committeeId || null : committees[0]?.id,
+        centerLat: zoneValue.latitude, centerLng: zoneValue.longitude, radiusMeters: zoneValue.radiusMeters,
+        locationAccuracy: zoneValue.accuracy, placeName: form.placeName || null,
       };
       const response = await fetch(editingId ? `/api/events/${editingId}` : "/api/events", {
         method: editingId ? "PATCH" : "POST",
@@ -66,6 +91,7 @@ export function AdminEventManager({ initialEvents, committees, isAdmin }: { init
       setForm(emptyForm);
       setEditingId(null);
       setFormLanguage("en");
+      setZoneValue({ latitude: 30.0444, longitude: 31.2357, radiusMeters: 100, accuracy: null, placeName: null, saveAsZone: false, zoneName: null, zoneId: null });
     } catch {
       const errorMessage = t("saveError");
       setMessage(errorMessage);
@@ -98,6 +124,8 @@ export function AdminEventManager({ initialEvents, committees, isAdmin }: { init
           <label>{t("starts")}<input type="datetime-local" value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} required /></label>
           <label>{t("ends")}<input type="datetime-local" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} /></label>
           <label>{t("location")}<input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} maxLength={250} /></label>
+          <ZoneCapture value={{ ...zoneValue, placeName: form.placeName }} onChange={(value) => setZoneValue(value)} />
+          <label>{t("placeName")}<input value={form.placeName ?? ""} onChange={(event) => setForm({ ...form, placeName: event.target.value || null })} maxLength={100} /></label>
           {isAdmin && <label>{t("committee")}<select value={form.committeeId} onChange={(event) => setForm({ ...form, committeeId: event.target.value })}><option value="">{t("allMembers")}</option>{committees.map((committee) => <option value={committee.id} key={committee.id}>{getCommitteeLabel(committee.name, locale as "en" | "ar")}</option>)}</select></label>}
           {formLanguage === "en"
             ? <label className="admin-form-wide">{t("descriptionEn")}<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} required maxLength={2000} rows={4} /></label>

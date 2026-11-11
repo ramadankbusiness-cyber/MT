@@ -32,7 +32,7 @@ export default async function AttendancePage({ params }: Props) {
       <main id="main-content" className="inner-page">
         <section className="content-section page-intro">
           <div className="section-heading"><p className="eyebrow">{t("memberEyebrow")}</p><h1>{t("title")}</h1><p className="section-lead">{t("memberLead")}</p></div>
-          <AttendanceTools role="MEMBER" initialSessions={[]} zones={[]} committees={[]} members={[]} records={records.map((record) => ({ ...record, checkedInAt: record.checkedInAt?.toISOString() ?? null }))} attendanceRate={sessions ? Math.round(attended / sessions * 100) : 0} />
+          <AttendanceTools role="MEMBER" initialSessions={[]} committees={[]} members={[]} records={records.map((record) => ({ ...record, checkedInAt: record.checkedInAt?.toISOString() ?? null }))} attendanceRate={sessions ? Math.round(attended / sessions * 100) : 0} />
         </section>
       </main>
     );
@@ -46,11 +46,10 @@ export default async function AttendancePage({ params }: Props) {
     },
     orderBy: { startsAt: "desc" },
   });
-  const [zones, committees, members] = user.role === "ADMIN" ? await Promise.all([
-    prisma.zone.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  const [committees, members] = user.role === "ADMIN" ? await Promise.all([
     listClubCommittees(),
     prisma.user.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, committeeId: true, committee: { select: { name: true } } } }),
-  ]) : [[], [], []];
+  ]) : [[], []];
   const sessionViews: AttendanceSessionView[] = sessions.map((session) => ({
     id: session.id,
     title: session.title,
@@ -60,13 +59,18 @@ export default async function AttendancePage({ params }: Props) {
     qrMode: session.qrMode,
     committee: session.committee,
     zone: session.zone,
+    centerLat: session.centerLat,
+    centerLng: session.centerLng,
+    radiusMeters: session.radiusMeters,
+    locationAccuracy: session.locationAccuracy,
+    placeName: session.placeName,
     recordCount: session._count.records,
   }));
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
         <div className="section-heading"><p className="eyebrow">{user.role === "ADMIN" ? "ADMIN" : "LEADER"} · {t("eyebrow")}</p><h1>{t("sessionsTitle")}</h1><p className="section-lead">{t("lead")}</p></div>
-        <AttendanceTools role={user.role} initialSessions={sessionViews} zones={zones} committees={committees} members={members} records={[]} attendanceRate={0} />
+        <AttendanceTools role={user.role} initialSessions={sessionViews} committees={committees} members={members} records={[]} attendanceRate={0} />
       </section>
     </main>
   );

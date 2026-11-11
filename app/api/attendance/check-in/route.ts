@@ -1,6 +1,6 @@
 import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
-import { AttendanceAttemptStatus, AttendanceStatus } from "@prisma/client";
+import { AttendanceAttemptStatus, AttendanceStatus } from "@/lib/db-enums";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { checkInSchema } from "@/lib/schemas";
@@ -66,12 +66,21 @@ async function POSTInternal(request: Request) {
   if (input.accuracy > suspiciousAccuracyMeters) {
     return reject("Your location accuracy is too low. Enable precise location and try again.", 400, undefined, true);
   }
+  const zoneCenter = session.zone
+    ? { latitude: session.zone.latitude, longitude: session.zone.longitude }
+    : session.centerLat != null && session.centerLng != null
+      ? { latitude: session.centerLat, longitude: session.centerLng }
+      : null;
+  const zoneRadius = session.zone?.radiusMeters ?? session.radiusMeters ?? null;
+  if (!zoneCenter || zoneRadius == null) {
+    return reject("This session has no attendance zone configured.", 403);
+  }
   const distanceMeters = haversineMeters(
     { latitude: input.latitude, longitude: input.longitude },
-    { latitude: session.zone.latitude, longitude: session.zone.longitude },
+    zoneCenter,
   );
-  if (!isInsideZone(distanceMeters, input.accuracy, session.zone.radiusMeters)) {
-    const outsideMeters = Math.max(0, Math.round(distanceMeters + input.accuracy - session.zone.radiusMeters));
+  if (!isInsideZone(distanceMeters, input.accuracy, zoneRadius)) {
+    const outsideMeters = Math.max(0, Math.round(distanceMeters + input.accuracy - zoneRadius));
     return reject(`You are ${outsideMeters} m away from the allowed area.`, 403, distanceMeters);
   }
 

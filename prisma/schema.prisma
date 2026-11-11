@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
 }
 
 datasource db {
@@ -136,26 +137,34 @@ model Zone {
   updatedAt   DateTime @updatedAt
   committee   Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
   sessions    AttendanceSession[]
+  eventZones  Event[]    @relation("EventZone")
 
   @@index([committeeId])
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  title       String
-  titleAr     String?
-  description String   @db.VarChar(2000)
-  descriptionAr String? @db.VarChar(2000)
-  startsAt    DateTime
-  endsAt      DateTime?
-  location    String?
-  committeeId String?
-  createdById String
-  published   Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  committee   Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
-  createdBy   User     @relation("EventAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  id              String   @id @default(cuid())
+  title           String
+  titleAr         String?
+  description     String   @db.VarChar(2000)
+  descriptionAr   String?  @db.VarChar(2000)
+  startsAt        DateTime
+  endsAt          DateTime?
+  location        String?
+  placeName       String?
+  centerLat       Float?
+  centerLng       Float?
+  radiusMeters    Int?
+  locationAccuracy Float?
+  zoneId          String?
+  committeeId     String?
+  createdById     String
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  committee       Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  zone            Zone?      @relation("EventZone", fields: [zoneId], references: [id], onDelete: SetNull)
+  createdBy       User     @relation("EventAuthor", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([published, startsAt])
   @@index([committeeId, startsAt])
@@ -165,7 +174,12 @@ model AttendanceSession {
   id                String   @id @default(cuid())
   title             String
   committeeId       String?
-  zoneId            String
+  zoneId            String?
+  placeName         String?
+  centerLat         Float?
+  centerLng         Float?
+  radiusMeters      Int?
+  locationAccuracy  Float?
   startsAt          DateTime
   endsAt            DateTime
   lateAfterMinutes  Int      @default(10)
@@ -174,7 +188,7 @@ model AttendanceSession {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   committee         Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
-  zone              Zone     @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  zone              Zone?    @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   records           AttendanceRecord[]
   attempts          AttendanceAttempt[]
   qrTokens          QrToken[]

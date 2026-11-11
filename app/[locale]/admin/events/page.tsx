@@ -24,7 +24,14 @@ export default async function AdminEventsPage({ params }: Props) {
       where: isAdmin ? {} : { committeeId: access.user.committeeId },
       include: { committee: { select: { id: true, name: true } } },
       orderBy: { startsAt: "desc" },
-    }),
+    }).then((events) =>
+      events.map((event) => ({
+        ...event,
+        centerLat: event.centerLat ?? 30.0444,
+        centerLng: event.centerLng ?? 31.2357,
+        radiusMeters: event.radiusMeters ?? 100,
+      }))
+    ),
     listClubCommittees(isAdmin ? undefined : access.user.committeeId),
   ]);
   return (

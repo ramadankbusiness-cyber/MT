@@ -65,6 +65,15 @@ export const zoneSchema = z.object({
   committeeId: z.string().optional().nullable(),
 });
 
+export const zoneCaptureSchema = z.object({
+  centerLat: z.number().min(-90).max(90),
+  centerLng: z.number().min(-180).max(180),
+  radiusMeters: z.number().int().min(10).max(1000),
+  locationAccuracy: z.number().min(0).nullable().optional(),
+  placeName: z.string().trim().max(100).optional().nullable(),
+  zoneId: z.string().optional().nullable(),
+});
+
 export const eventSchema = z.object({
   title: z.string().trim().min(2).max(120),
   titleAr: z.string().trim().max(120).optional().nullable(),
@@ -75,6 +84,7 @@ export const eventSchema = z.object({
   location: z.string().trim().max(250).optional().nullable(),
   committeeId: z.string().optional().nullable(),
   published: z.boolean().default(true),
+  ...zoneCaptureSchema.shape,
 }).refine((value) => !value.endsAt || value.endsAt > value.startsAt, {
   message: "End time must be after the event start",
   path: ["endsAt"],
@@ -83,11 +93,11 @@ export const eventSchema = z.object({
 export const attendanceSessionSchema = z.object({
   title: z.string().trim().min(2).max(120),
   committeeId: z.string().optional().nullable(),
-  zoneId: z.string().min(1),
   startsAt: z.coerce.date(),
   endsAt: z.coerce.date(),
   lateAfterMinutes: z.number().int().min(0).max(240).default(10),
   qrMode: z.enum(["ROTATING", "STATIC"]).default("ROTATING"),
+  ...zoneCaptureSchema.shape,
 }).refine((value) => value.endsAt > value.startsAt, {
   message: "End time must be after start time",
   path: ["endsAt"],
