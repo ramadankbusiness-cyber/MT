@@ -5,7 +5,7 @@ import { useRouter } from "@/i18n/navigation";
 import { FormEvent, useState } from "react";
 import { Eye, EyeOff, KeyRound, Mail, LoaderCircle } from "lucide-react";
 import { loginSchema } from "@/lib/schemas";
-import { getPostLoginPath, safeReturnPath } from "@/lib/login";
+import { getLoginErrorReference, getPostLoginPath, isCredentialSignInFailure, isSignInSuccess } from "@/lib/login";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -43,32 +43,37 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
 
     setBusy(true);
     try {
-      const safeCallback = safeReturnPath(callbackUrl);
+      const postLoginPath = getPostLoginPath(false, callbackUrl);
       const result = await signIn("credentials", {
         email,
         password,
         rememberMe,
-        callbackUrl: safeCallback ?? "/dashboard",
+        callbackUrl: postLoginPath,
         redirect: false,
       });
-      if (!result?.ok) {
+      if (!isSignInSuccess(result)) {
         const code = result?.code ?? "";
+        const errorReference = getLoginErrorReference(code);
         let errorMessage: string;
         if (code === "account-disabled") errorMessage = t("disabled");
         else if (code.startsWith("try-again-")) {
           const minutes = Number(code.slice("try-again-".length));
           errorMessage = t("tryAgain", { minutes: Number.isFinite(minutes) && minutes > 0 ? minutes : 15 });
-        } else errorMessage = t("incorrect");
+        } else if (errorReference) errorMessage = t("failureWithId", { id: errorReference });
+        else if (isCredentialSignInFailure(result)) errorMessage = t("incorrect");
+        else errorMessage = t("failure");
         setMessage(errorMessage);
         showToast(errorMessage);
         return;
       }
 
       const session = await getSession();
-      router.replace(getPostLoginPath(session?.user.mustChangePassword ?? false, safeCallback));
+      router.replace(getPostLoginPath(session?.user.mustChangePassword ?? false, postLoginPath));
       router.refresh();
     } catch {
-      const errorMessage = t("failure");
+      const errorId = crypto.randomUUID().slice(0, 8);
+      console.error("[login] unexpected failure", errorId);
+      const errorMessage = t("failureWithId", { id: errorId });
       setMessage(errorMessage);
       showToast(errorMessage);
     } finally {

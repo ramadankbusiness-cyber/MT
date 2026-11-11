@@ -3,17 +3,20 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/check-env.mjs && node scripts/ensure-dev-auth-secret.mjs && node scripts/setup-database.mjs && node scripts/generate-prisma.mjs && next dev",
+    "dev:all": "concurrently --kill-others --names backend,frontend --prefix-colors yellow,cyan \"npm --prefix backend run dev\" \"npm run dev\"",
+    "prebuild": "node scripts/generate-prisma.mjs",
     "build": "next build",
     "preview": "next start",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint app components data",
     "lint:fix": "eslint app components data --fix",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
+    "db:generate": "node scripts/generate-prisma.mjs",
+    "db:migrate": "node scripts/setup-database.mjs",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "seed:admin": "tsx prisma/seed-admin.ts",
     "test:system": "vitest run --config vitest.system.config.ts",
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",
@@ -30,6 +33,7 @@
     "test:backend": "cd backend && vitest run",
     "test:backend:coverage": "cd backend && vitest run --coverage",
     "test:e2e": "npx playwright test",
+    "test:e2e:login": "node scripts/verify-login-e2e.mjs",
     "test:all": "npm run test:frontend && npm run test:backend && npm run test:e2e"
   },
   "dependencies": {
@@ -83,6 +87,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "@eslint/js": "^9.39.5",
     "@next/eslint-plugin-next": "^15.5.29",
     "@playwright/test": "^1.61.1",
