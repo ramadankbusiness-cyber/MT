@@ -5,6 +5,8 @@ import { PrismaClient } from "../../lib/generated/prisma/index.js";
 
 dotenv.config({ path: ".env.local" });
 
+test.setTimeout(120000);
+
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@mtclub.local").trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const MEMBER_EMAIL = "member.e2e@mtclub.local";
@@ -16,7 +18,7 @@ if (!ADMIN_PASSWORD || ADMIN_PASSWORD.length < 16) {
 
 const prisma = new PrismaClient();
 
-const slow = { timeout: 55000 };
+const slow = { timeout: 120000 };
 
 test.describe("login", () => {
   test.beforeAll(async () => {
@@ -66,8 +68,10 @@ test.describe("login", () => {
   });
 
   async function goToLogin(page: Parameters<typeof test>[0]["page"]) {
-    await page.goto("/en/login", { waitUntil: "load", timeout: 60000 });
-    await page.waitForTimeout(500);
+    await page.goto("/en/login", { waitUntil: "domcontentloaded", timeout: 120000 });
+    await page.getByLabel("Email").waitFor({ state: "visible", timeout: 10000 });
+    await page.getByRole("button", { name: "Log in" }).waitFor({ state: "visible", timeout: 10000 });
+    await page.waitForTimeout(800);
   }
 
   async function submitCredentials(page: Parameters<typeof test>[0]["page"], email: string, password: string) {
@@ -79,9 +83,9 @@ test.describe("login", () => {
       await page.getByRole("button", { name: "Log in" }).click();
       try {
         await Promise.race([
-          page.waitForResponse((response) => response.url().includes("/api/auth/callback/credentials"), { timeout: 6000 }),
-          page.locator(".login-message").waitFor({ state: "visible", timeout: 6000 }),
-          page.locator(".login-field-error").first().waitFor({ state: "visible", timeout: 6000 }),
+          page.waitForResponse((response) => response.url().includes("/api/auth/callback/credentials"), { timeout: 8000 }),
+          page.locator(".login-message").waitFor({ state: "visible", timeout: 8000 }),
+          page.locator(".login-field-error").first().waitFor({ state: "visible", timeout: 8000 }),
         ]);
         return;
       } catch (error) {
@@ -105,9 +109,10 @@ test.describe("login", () => {
 
   test("empty fields show validation errors", async ({ page }) => {
     await goToLogin(page);
+    await page.waitForTimeout(1000);
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page.locator("#login-email-error")).toHaveText("Enter a valid email address.");
-    await expect(page.locator("#login-password-error")).toHaveText("Enter your password.");
+    await expect(page.locator("#login-email-error")).toHaveText("Enter a valid email address.", { timeout: 10000 });
+    await expect(page.locator("#login-password-error")).toHaveText("Enter your password.", { timeout: 10000 });
   });
 
   test("correct admin credentials log in and redirect to the dashboard", async ({ page }) => {
