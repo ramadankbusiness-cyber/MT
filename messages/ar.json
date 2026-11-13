@@ -192,7 +192,12 @@
     "committeeUi": {
       "selected": "اللجان المختارة",
       "remove": "إزالة {committee}",
-      "chooseLimit": "اختار من لجنة إلى 3 لجان."
+      "chooseLimit": "اختار من لجنة إلى 3 لجان.",
+      "all": "جميع اللجان",
+      "chooseCommittee": "اختر لجنة",
+      "loadFailed": "فشل تحميل اللجان.",
+      "retry": "أعد المحاولة",
+      "loading": "يتم التحميل…"
     },
     "notifications": {
       "filter": "تصفية حسب النوع",
@@ -506,7 +511,9 @@
         "saving": "جاري الحفظ…",
         "remove": "إزالة",
         "editButton": "تعديل",
-        "saveError": "ما قدرناش نحفظ بيانات عضو الفريق. حاول مرة تانية."
+        "saveError": "ما قدرناش نحفظ بيانات عضو الفريق. حاول مرة تانية.",
+        "english": "English",
+        "arabic": "Arabic"
       },
       "eventManager": {
         "edit": "تعديل الفعالية",

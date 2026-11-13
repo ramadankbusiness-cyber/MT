@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { notificationSchema } from "@/lib/schemas";
-import { countUnreadForUser, dispatchPushNotification, isNotificationType } from "@/lib/notification-delivery";
+import { countUnreadForUser, dispatchPushNotification, insertNotificationRecipients, isNotificationType } from "@/lib/notification-delivery";
 import { writeAuditLog } from "@/lib/audit";
 import { isClubCommitteeId } from "@/lib/committees";
 
@@ -129,10 +129,10 @@ async function POSTInternal(request: Request) {
       },
     });
     if (deliverUsers.length) {
-      await transaction.notificationRecipient.createMany({
-        data: deliverUsers.map((user) => ({ notificationId: created.id, userId: user.id, deliveredAt: scheduledAt ? null : now })),
-        skipDuplicates: true,
-      });
+      await insertNotificationRecipients(
+        transaction,
+        deliverUsers.map((user) => ({ notificationId: created.id, userId: user.id, deliveredAt: scheduledAt ? null : now })),
+      );
     }
     return created;
   });

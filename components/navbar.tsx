@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import { Link, usePathname } from "@/i18n/navigation";
 import { Menu, X } from "lucide-react";
@@ -42,9 +41,7 @@ export function Navbar() {
               {text.nav[key]}
             </Link>
           ))}
-          <button className="icon-button language-button language-mobile" type="button" onClick={toggleLanguage} aria-label={text.nav.switchTo}>
-            {text.nav.language}
-          </button>
+          
         </nav>
         <div className="nav-actions">
           <button className="icon-button language-button language-desktop" type="button" onClick={toggleLanguage} aria-label={text.nav.switchTo}>
@@ -57,7 +54,7 @@ export function Navbar() {
             <div className="account-actions">
               <NotificationBell />
               <button className="avatar-button" type="button" aria-expanded={accountMenuOpen} aria-label={text.nav.account} onClick={() => setAccountMenuOpen((open) => !open)}>
-                {session.user.image ? <Image src={session.user.image} alt="" width={34} height={34} /> : <span>{session.user.name?.slice(0, 1).toUpperCase() ?? "M"}</span>}
+                {session.user.image ? <Image src={session.user.image} alt="" width={34} height={34} /> : <Image src="/mt-logo.png" alt="" width={34} height={34} />}
               </button>
               {accountMenuOpen && (
                 <div className="account-menu">

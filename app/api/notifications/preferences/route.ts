@@ -1,6 +1,6 @@
 import { withApiErrorHandling } from "@/lib/api-error-handler";
 import { NextResponse } from "next/server";
-import { NotificationType } from "@prisma/client";
+import { NotificationType } from "@/lib/db-enums";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { notificationPreferenceSchema } from "@/lib/schemas";

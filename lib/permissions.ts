@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import { Role } from "@/lib/db-enums";
 
 export const permissions = {
   ADMIN: [

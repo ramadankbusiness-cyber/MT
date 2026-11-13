@@ -5,7 +5,6 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { isVercel } from "./utils/storage.js";
-import authRoutes from "./routes/auth.js";
 import eventsRoutes from "./routes/events.js";
 import attendanceRoutes from "./routes/attendance.js";
 import adminRoutes from "./routes/admin.js";
@@ -14,7 +13,6 @@ import postsRoutes from "./routes/posts.js";
 import teamRoutes from "./routes/team.js";
 import galleryRoutes from "./routes/gallery.js";
 import notificationsRoutes from "./routes/notifications.js";
-import { seedAdmin, seedTeam } from "./seed.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -37,12 +35,22 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "5mb" }));
 
+const legacyAuthEntryPoints = new Set(["/login", "/register", "/google/login"]);
+app.use("/api/auth", (req, res, next) => {
+  if (req.method === "POST" && legacyAuthEntryPoints.has(req.path)) {
+    return res.status(410).json({
+      message: "Sign in and account access are handled by the current MT Club website.",
+      code: "AUTH_MOVED_TO_NEXT",
+    });
+  }
+  next();
+});
+
 const imagesPath = path.join(__dirname, "public/images");
 if (fs.existsSync(imagesPath)) {
   app.use("/images", express.static(imagesPath));
 }
 
-app.use("/api/auth", authRoutes);
 app.use("/api/events", eventsRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/admin", adminRoutes);
@@ -68,10 +76,7 @@ app.use((err, req, res, next) => {
 const onesignalOk = !!(process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_API_KEY);
 console.log("[Config] OneSignal:", onesignalOk ? "configured" : "NOT CONFIGURED");
 
-seedAdmin();
-seedTeam();
-
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.BACKEND_PORT || process.env.PORT || 5001;
 
 if (!isVercel) {
   app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

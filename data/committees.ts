@@ -15,7 +15,7 @@ export const committeeDetails: Record<ClubCommittee, {
 }> = {
   OC: {
     key: "oc",
-    nameAr: "اللجنة التنظيمية",
+    nameAr: "OC",
     fullName: "Organizing Committee",
     fullNameAr: "اللجنة التنظيمية",
     description: "Plans and runs our events from the first idea to the last detail: schedules, venues, speakers, and everything that makes an event run smoothly.",
@@ -24,7 +24,7 @@ export const committeeDetails: Record<ClubCommittee, {
   },
   HR: {
     key: "hr",
-    nameAr: "الموارد البشرية",
+    nameAr: "HR",
     fullName: "Human Resources",
     fullNameAr: "الموارد البشرية",
     description: "Takes care of our people. Recruits and onboards new members, tracks attendance and engagement, and keeps the club a supportive, well-organized community.",
@@ -33,7 +33,7 @@ export const committeeDetails: Record<ClubCommittee, {
   },
   PR: {
     key: "pr",
-    nameAr: "العلاقات العامة",
+    nameAr: "PR",
     fullName: "Public Relations",
     fullNameAr: "العلاقات العامة",
     description: "Builds relationships outside the club. Reaches out to sponsors, partners and other organizations, and represents MT Club professionally.",
@@ -42,7 +42,7 @@ export const committeeDetails: Record<ClubCommittee, {
   },
   Tech: {
     key: "tech",
-    nameAr: "اللجنة التقنية",
+    nameAr: "Tech",
     fullName: "Technology",
     fullNameAr: "اللجنة التقنية",
     description: "Builds and maintains our digital tools, including the website and internal systems, and supports other committees with technical solutions.",
@@ -51,7 +51,7 @@ export const committeeDetails: Record<ClubCommittee, {
   },
   Logistics: {
     key: "logistics",
-    nameAr: "اللوجستيات",
+    nameAr: "Logistics",
     fullName: "Logistics",
     fullNameAr: "اللوجستيات",
     description: "Prepares everything physical behind the scenes: equipment, setup, transportation, supplies and the venue, so each event has what it needs on time.",
@@ -60,7 +60,7 @@ export const committeeDetails: Record<ClubCommittee, {
   },
   Media: {
     key: "media",
-    nameAr: "الميديا",
+    nameAr: "Media",
     fullName: "Media",
     fullNameAr: "الميديا",
     description: "Tells the story of the club through design, photography, video and social media, and keeps our visual identity consistent.",
@@ -69,7 +69,7 @@ export const committeeDetails: Record<ClubCommittee, {
   },
   "First Aid": {
     key: "firstaid",
-    nameAr: "الإسعافات الأولية",
+    nameAr: "First Aid",
     fullName: "First Aid",
     fullNameAr: "الإسعافات الأولية",
     description: "Keeps everyone safe at our events. Trained members provide first aid, handle emergencies calmly, and make sure safety standards are respected.",

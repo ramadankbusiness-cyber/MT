@@ -6,9 +6,10 @@ import { useAppToast } from "@/components/app-toast-provider";
 import { useLocale, useTranslations } from "next-intl";
 import { getCommitteeLabel } from "@/data/committees";
 import ZoneCapture, { type ZoneCaptureValue } from "@/components/zone-capture";
+import { CommitteeSelect } from "@/components/committee-select";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
-type Committee = { id: string; name: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 type AttendanceMember = { id: string; name: string; committeeId: string | null; committee: { name: string } | null };
 export type AttendanceSessionView = {
   id: string;
@@ -17,7 +18,7 @@ export type AttendanceSessionView = {
   endsAt: string;
   lateAfterMinutes: number;
   qrMode: "ROTATING" | "STATIC";
-  committee: Committee | null;
+  committee: { id: string; name: string } | null;
   zone: { id: string; name: string; latitude: number; longitude: number; radiusMeters: number } | null;
   centerLat: number | null;
   centerLng: number | null;
@@ -35,25 +36,29 @@ export function AttendanceTools({
   members,
   records,
   attendanceRate,
+  userRole,
+  userCommitteeId,
 }: {
-  role: Role;
-  initialSessions: AttendanceSessionView[];
-  committees: Committee[];
-  members: AttendanceMember[];
-  records: AttendanceRecordView[];
-  attendanceRate: number;
+  role: Role,
+  initialSessions: AttendanceSessionView[],
+  committees: DbCommittee[],
+  members: AttendanceMember[],
+  records: AttendanceRecordView[],
+  attendanceRate: number,
+  userRole?: Role,
+  userCommitteeId?: string | null,
 }) {
   if (role === "MEMBER") return <MemberAttendance records={records} attendanceRate={attendanceRate} />;
-  return <SessionManager sessions={initialSessions} committees={committees} members={members} isAdmin={role === "ADMIN"} isLeader={role === "LEADER"} />;
+  return <SessionManager sessions={initialSessions} committees={committees} members={members} isAdmin={role === "ADMIN"} userRole={userRole} userCommitteeId={userCommitteeId} />;
 }
 
-function SessionManager({ sessions: initialSessions, committees, members, isAdmin, isLeader }: { sessions: AttendanceSessionView[]; committees: Committee[]; members: AttendanceMember[]; isAdmin: boolean; isLeader: boolean }) {
+function SessionManager({ sessions: initialSessions, committees, members, isAdmin, userRole, userCommitteeId }: { sessions: AttendanceSessionView[]; committees: DbCommittee[]; members: AttendanceMember[]; isAdmin: boolean; userRole?: Role; userCommitteeId?: string | null }) {
   const t = useTranslations("site.attendance");
   const locale = useLocale();
   const showToast = useAppToast();
   const [sessions, setSessions] = useState(initialSessions);
   const [title, setTitle] = useState("");
-  const [committeeId, setCommitteeId] = useState("");
+  const [committeeId, setCommitteeId] = useState(userRole === "LEADER" && userCommitteeId ? userCommitteeId : "");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [lateAfterMinutes, setLateAfterMinutes] = useState(10);
@@ -71,7 +76,7 @@ function SessionManager({ sessions: initialSessions, committees, members, isAdmi
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title, committeeId: committeeId || null,
+          title, committeeId: userRole === "LEADER" ? userCommitteeId : committeeId || null,
           startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(),
           lateAfterMinutes, qrMode,
           centerLat: zoneValue.latitude, centerLng: zoneValue.longitude, radiusMeters: zoneValue.radiusMeters,
@@ -113,9 +118,15 @@ function SessionManager({ sessions: initialSessions, committees, members, isAdmi
         <h2>{t("create")}</h2>
         <div className="admin-form-grid">
           <label>{t("title")}<input value={title} onChange={(event) => setTitle(event.target.value)} minLength={2} maxLength={120} required /></label>
-          {isLeader
-            ? <input type="hidden" name="committeeId" value={committeeId} />
-            : <label>{t("committee")}<select value={committeeId} onChange={(event) => setCommitteeId(event.target.value)}><option value="">{t("allCommittees")}</option>{committees.map((committee) => <option value={committee.id} key={committee.id}>{getCommitteeLabel(committee.name, locale as "en" | "ar")}</option>)}</select></label>}
+          <label>{t("committee")}<CommitteeSelect
+            committees={committees}
+            value={committeeId}
+            onChange={(v) => setCommitteeId(Array.isArray(v) ? "" : (v ?? ""))}
+            mode="single"
+            showAll={true}
+            allLabel={t("allCommittees")}
+            disabled={userRole === "LEADER"}
+          /></label>
           <ZoneCapture value={zoneValue} onChange={(value) => setZoneValue(value)} />
           <label>{t("placeName")}<input value={zoneValue.placeName ?? ""} onChange={(event) => setZoneValue({ ...zoneValue, placeName: event.target.value || null })} maxLength={100} /></label>
           <label>{t("starts")}<input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></label>

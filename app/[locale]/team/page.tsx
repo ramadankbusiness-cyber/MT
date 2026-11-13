@@ -12,7 +12,7 @@ export default async function TeamPage() {
   const user = process.env.DATABASE_URL ? await getCurrentUser() : null;
   const isAdmin = user?.role === "ADMIN" && !!user.isActive && !user.mustChangePassword;
   let members: ManagedTeamMember[] = [];
-  let committees: { id: string; name: string }[] = [];
+  let committees: { id: string; key: string; name: string; nameAr: string }[] = [];
   if (process.env.DATABASE_URL) {
     const [databaseMembers, databaseCommittees] = await Promise.all([
       prisma.teamMember.findMany({

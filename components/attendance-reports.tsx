@@ -9,9 +9,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { CommitteeSelect } from "@/components/committee-select";
 
-type Committee = { id: string; name: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 type Summary = { sessions: number; attendanceRate: number; present: number; late: number; absent: number; excused: number };
 type Trend = { date: string; expected: number; attended: number };
 type CommitteeReport = { committee: string; eligible: number; attended: number; excused: number; rate: number };
@@ -31,7 +33,7 @@ export function AttendanceReports({
 }: {
   from: string;
   to: string;
-  committees: Committee[];
+  committees: DbCommittee[];
   selectedCommittee: string;
   invalidFilter: boolean;
   summary: Summary;
@@ -41,16 +43,22 @@ export function AttendanceReports({
   exportHref: string;
 }) {
   const t = useTranslations("site.adminPages.reports");
+  const [localCommittee, setLocalCommittee] = useState(selectedCommittee);
   return (
     <div className="attendance-reports">
       <form className="team-edit-form report-filters" method="get">
         <label>{t("from")}<input type="date" name="from" defaultValue={from} required /></label>
         <label>{t("to")}<input type="date" name="to" defaultValue={to} required /></label>
         {committees.length > 0 && (
-          <label>{t("committee")}<select name="committeeId" defaultValue={selectedCommittee}>
-            <option value="">{t("all")}</option>
-            {committees.map((committee) => <option value={committee.id} key={committee.id}>{committee.name}</option>)}
-          </select></label>
+          <label>{t("committee")}<CommitteeSelect
+            committees={committees}
+            value={localCommittee}
+            onChange={(v) => setLocalCommittee(Array.isArray(v) ? "" : (v || ""))}
+            mode="single"
+            showAll={true}
+            allLabel={t("all")}
+            name="committeeId"
+          /></label>
         )}
         <div className="report-filter-actions">
           <button className="button button-primary" type="submit">{t("apply")}</button>

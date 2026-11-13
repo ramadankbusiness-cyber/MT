@@ -1,9 +1,4 @@
-import bcrypt from "bcryptjs";
 import { supabase } from "./config/supabase.js";
-
-const DEFAULT_ADMIN_EMAIL = "admin@mtclub.com";
-const DEFAULT_ADMIN_PASSWORD = "admin123";
-const DEFAULT_ADMIN_NAME = "Admin";
 
 const DEFAULT_TEAM_ROWS = [
   { name: "", role: "Chairman", has_image: 0, sort_order: 0 },
@@ -67,62 +62,5 @@ export async function seedTeam() {
     }
   } catch (err) {
     console.error("[Team] Seed error:", err.message);
-  }
-}
-
-export async function seedAdmin() {
-  try {
-    if (!supabase) return;
-    const { data: existing, error: fetchError } = await supabase
-      .from("members")
-      .select("id")
-      .eq("role", "admin")
-      .limit(1);
-
-    if (fetchError) {
-      console.error("SEED: Failed to query members table:", fetchError.message);
-      return;
-    }
-
-    if (existing && existing.length > 0) {
-      return;
-    }
-
-    const { data: emailTaken } = await supabase
-      .from("members")
-      .select("id")
-      .eq("email", DEFAULT_ADMIN_EMAIL)
-      .single();
-
-    if (emailTaken) {
-      console.log("SEED: Default admin email already taken, skipping seed.");
-      return;
-    }
-
-    const hashedPassword = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
-
-    const { error: insertError } = await supabase
-      .from("members")
-      .insert({
-        name: DEFAULT_ADMIN_NAME,
-        email: DEFAULT_ADMIN_EMAIL,
-        password: hashedPassword,
-        role: "admin",
-        department: "",
-        academic_number: "",
-      });
-
-    if (insertError) {
-      console.error("SEED: Failed to create admin:", insertError.message);
-      return;
-    }
-
-    console.log("===========================================");
-    console.log(" DEFAULT ADMIN ACCOUNT CREATED");
-    console.log(" Email:    " + DEFAULT_ADMIN_EMAIL);
-    console.log(" Password: " + DEFAULT_ADMIN_PASSWORD);
-    console.log("===========================================");
-  } catch (err) {
-    console.error("SEED: Unexpected error:", err.message);
   }
 }

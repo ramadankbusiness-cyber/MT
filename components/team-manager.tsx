@@ -5,8 +5,9 @@ import { FormEvent, useState } from "react";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useLocale, useTranslations } from "next-intl";
 import { getCommitteeLabel } from "@/data/committees";
+import { CommitteeSelect } from "@/components/committee-select";
 
-type Committee = { id: string; name: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 export type ManagedTeamMember = {
   id: string;
   name: string;
@@ -25,7 +26,7 @@ export type ManagedTeamMember = {
 
 const blank = { name: "", title: "", titleAr: "", committeeId: "", bio: "", bioAr: "", website: "", linkedin: "", instagram: "", photoUrl: "", visible: true };
 
-export function TeamManager({ initialMembers, committees }: { initialMembers: ManagedTeamMember[]; committees: Committee[] }) {
+export function TeamManager({ initialMembers, committees }: { initialMembers: ManagedTeamMember[]; committees: DbCommittee[] }) {
   const showToast = useAppToast();
   const t = useTranslations("site.pages.teamManager");
   const locale = useLocale() as "en" | "ar";
@@ -169,7 +170,13 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
           {formLanguage === "en"
             ? <label>{t("titleEn")}<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder={t("titlePlaceholder")} required maxLength={100} /></label>
             : <label lang="ar">{t("titleAr")}<input value={form.titleAr} onChange={(event) => setForm({ ...form, titleAr: event.target.value })} dir="rtl" maxLength={100} /></label>}
-          <label>{t("committee")}<select value={form.committeeId} onChange={(event) => setForm({ ...form, committeeId: event.target.value })} required><option value="">{t("chooseCommittee")}</option>{committees.map((committee) => <option key={committee.id} value={committee.id}>{getCommitteeLabel(committee.name, locale)}</option>)}</select></label>
+          <label>{t("committee")}<CommitteeSelect
+            committees={committees}
+            value={form.committeeId}
+            onChange={(v) => setForm({ ...form, committeeId: Array.isArray(v) ? "" : (v || "") })}
+            mode="single"
+            required
+          /></label>
           <label>{t("photo")}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} /></label>
           {formLanguage === "en"
             ? <label className="admin-form-wide">{t("bioEn")}<textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} maxLength={500} rows={3} /></label>

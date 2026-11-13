@@ -2,19 +2,19 @@
 
 import { FormEvent, useState } from "react";
 import { X } from "lucide-react";
-import { CLUB_COMMITTEES, committeeDetails } from "@/data/committees";
+import { committeeDetails, type ClubCommittee } from "@/data/committees";
 import { joinApplicationSchema } from "@/lib/schemas";
 import { useSite } from "./site-provider";
 import { useAppToast } from "@/components/app-toast-provider";
+import { CommitteeSelect } from "@/components/committee-select";
 
-type FormFields = { name: string; email: string; committees: string[]; message: string };
+type FormFields = { name: string; email: string; committees: ClubCommittee[]; message: string };
 const initialForm: FormFields = { name: "", email: "", committees: [], message: "" };
 
 export function JoinForm() {
   const { text, language } = useSite();
   const showToast = useAppToast();
   const [form, setForm] = useState<FormFields>(initialForm);
-  const [committeeChoice, setCommitteeChoice] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -25,7 +25,7 @@ export function JoinForm() {
     if (!parsed.success) {
       const committeeIssue = parsed.error.issues.some((issue) => issue.path[0] === "committees");
       const emailIssue = parsed.error.issues.some((issue) => issue.path[0] === "email");
-      setErrorMessage(emailIssue ? text.join.invalidEmail : committeeIssue ? text.committeeUi.chooseLimit : text.join.required);
+      setErrorMessage(emailIssue ? text.join.invalidEmail : committeeIssue ? text.join.committeeLimit : text.join.required);
       return;
     }
 
@@ -38,7 +38,6 @@ export function JoinForm() {
       });
       if (!response.ok) throw new Error("Join request failed");
       setForm(initialForm);
-      setCommitteeChoice("");
       setStatus("success");
     } catch {
       setStatus("error");
@@ -47,22 +46,8 @@ export function JoinForm() {
     }
   }
 
-  function addCommittee(value: string) {
-    if (!value) return;
-    if (form.committees.length >= 3) {
-      setErrorMessage(text.join.committeeLimit);
-      setCommitteeChoice("");
-      return;
-    }
-    if (!form.committees.includes(value)) {
-      setForm((current) => ({ ...current, committees: [...current.committees, value] }));
-    }
-    setCommitteeChoice("");
-    setErrorMessage("");
-  }
-
-  function removeCommittee(value: string) {
-    setForm((current) => ({ ...current, committees: current.committees.filter((committee) => committee !== value) }));
+  function removeCommittee(value: ClubCommittee) {
+    setForm((current) => ({ ...form, committees: current.committees.filter((committee) => committee !== value) }));
   }
 
   function update(field: "name" | "email" | "message", value: string) {
@@ -79,27 +64,27 @@ export function JoinForm() {
       <label>{text.join.email}<input autoComplete="email" name="email" type="email" value={form.email} onChange={(event) => update("email", event.target.value)} required maxLength={254} /></label>
       <div className="join-committee-field">
         <label htmlFor="join-committee">{text.join.interest}</label>
-        <select
+        <CommitteeSelect
           id="join-committee"
-          name="committeeChoice"
-          value={committeeChoice}
-          onChange={(event) => addCommittee(event.target.value)}
-          aria-describedby="join-committee-hint"
-          required={!form.committees.length}
-        >
-          <option value="" disabled>{text.join.select}</option>
-          {CLUB_COMMITTEES.filter((committee) => !form.committees.includes(committee)).map((committee) => (
-            <option value={committee} key={committee} disabled={form.committees.length >= 3}>{language === "ar" ? committeeDetails[committee].nameAr : committee}</option>
-          ))}
-        </select>
+          mode="multi"
+          valueField="name"
+          value={form.committees as string[]}
+          onChange={(v) => setForm({ ...form, committees: v as ClubCommittee[] })}
+          required={form.committees.length === 0}
+          placeholder={text.join.select}
+        />
         <span className="join-committee-hint" id="join-committee-hint">{text.join.committeeHint}</span>
         {!!form.committees.length && <ul className="join-committee-pills" aria-label={text.committeeUi.selected}>
-          {form.committees.map((committee) => (
-            <li key={committee}>
-              <span>{language === "ar" ? committeeDetails[committee as keyof typeof committeeDetails].nameAr : committee}</span>
-              <button type="button" aria-label={text.committeeUi.remove.replace("{committee}", committee)} onClick={() => removeCommittee(committee)}><X size={14} aria-hidden="true" /></button>
-            </li>
-          ))}
+          {form.committees.map((committee) => {
+            const detail = committeeDetails[committee];
+            const label = language === "ar" ? detail?.nameAr ?? committee : committee;
+            return (
+              <li key={committee}>
+                <span>{label}</span>
+                <button type="button" aria-label={text.committeeUi.remove.replace("{committee}", committee)} onClick={() => removeCommittee(committee)}><X size={14} aria-hidden="true" /></button>
+              </li>
+            );
+          })}
         </ul>}
       </div>
       <label>{text.join.message}<textarea name="message" rows={5} value={form.message} onChange={(event) => update("message", event.target.value)} placeholder={text.join.messageHint} required maxLength={2000} /></label>

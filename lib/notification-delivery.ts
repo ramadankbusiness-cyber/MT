@@ -1,5 +1,6 @@
 import { sendNotification, setVapidDetails } from "web-push";
-import { NotificationType } from "@prisma/client";
+import { NotificationType, type NotificationType as NotificationTypeValue } from "@/lib/db-enums";
+import type { Prisma } from "@/lib/generated/prisma";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { countUnexcusedAbsences, getAbsenceWarningThreshold } from "@/lib/attendance";
@@ -102,7 +103,7 @@ export async function createImmediateNotification(input: {
   message: string;
   messageAr?: string | null;
   link: string;
-  type: NotificationType;
+  type: NotificationTypeValue;
   audience: "EVERYONE" | "COMMITTEE" | "USERS";
   committeeId: string | null;
   createdById: string;
@@ -130,10 +131,10 @@ export async function createImmediateNotification(input: {
       },
     });
     if (recipients.length) {
-      await transaction.notificationRecipient.createMany({
-        data: recipients.map((user) => ({ notificationId: created.id, userId: user.id, deliveredAt: now })),
-        skipDuplicates: true,
-      });
+      await insertNotificationRecipients(
+        transaction,
+        recipients.map((user) => ({ notificationId: created.id, userId: user.id, deliveredAt: now })),
+      );
     }
     return created;
   });
@@ -184,10 +185,10 @@ export async function dispatchOperationalReminders(now = new Date()) {
           },
         });
         if (deliverable.length) {
-          await transaction.notificationRecipient.createMany({
-            data: deliverable.map((user) => ({ notificationId: createdNotification.id, userId: user.id, deliveredAt: now })),
-            skipDuplicates: true,
-          });
+          await insertNotificationRecipients(
+            transaction,
+            deliverable.map((user) => ({ notificationId: createdNotification.id, userId: user.id, deliveredAt: now })),
+          );
         }
         return createdNotification;
       });
@@ -226,10 +227,10 @@ export async function dispatchOperationalReminders(now = new Date()) {
         },
       });
       if (deliverable.length) {
-        await transaction.notificationRecipient.createMany({
-          data: deliverable.map((user) => ({ notificationId: createdNotification.id, userId: user.id, deliveredAt: now })),
-          skipDuplicates: true,
-        });
+        await insertNotificationRecipients(
+          transaction,
+          deliverable.map((user) => ({ notificationId: createdNotification.id, userId: user.id, deliveredAt: now })),
+        );
       }
       return createdNotification;
     });
@@ -288,8 +289,21 @@ export async function dispatchOperationalReminders(now = new Date()) {
   return created;
 }
 
-export function isNotificationType(value: string): value is NotificationType {
-  return Object.values(NotificationType).includes(value as NotificationType);
+export function isNotificationType(value: string): value is NotificationTypeValue {
+  return Object.values(NotificationType).includes(value as NotificationTypeValue);
+}
+
+export async function insertNotificationRecipients(
+  transaction: Prisma.TransactionClient,
+  recipients: Array<{ notificationId: string; userId: string; deliveredAt: Date | null }>,
+) {
+  await Promise.all(recipients.map(({ notificationId, userId, deliveredAt }) =>
+    transaction.notificationRecipient.upsert({
+      where: { notificationId_userId: { notificationId, userId } },
+      create: { notificationId, userId, deliveredAt },
+      update: { deliveredAt },
+    }),
+  ));
 }
 
 export async function countUnreadForUser(userId: string) {

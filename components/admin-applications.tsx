@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CLUB_COMMITTEES } from "@/data/committees";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useLocale, useTranslations } from "next-intl";
+import { CommitteeSelect } from "@/components/committee-select";
 
 type Application = {
   id: number;
@@ -52,10 +52,15 @@ export function AdminApplications() {
     <div className="admin-applications">
       <div className="application-filter">
         <label htmlFor="application-committee-filter">{t("filter")}</label>
-        <select id="application-committee-filter" value={committee} onChange={(event) => setCommittee(event.target.value)}>
-          <option value="">{t("all")}</option>
-          {CLUB_COMMITTEES.map((item) => <option value={item} key={item}>{item}</option>)}
-        </select>
+        <CommitteeSelect
+          id="application-committee-filter"
+          valueField="name"
+          value={committee}
+          onChange={(v) => setCommittee(Array.isArray(v) ? "" : (v || ""))}
+          mode="single"
+          showAll={true}
+          allLabel={t("all")}
+        />
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {loading ? <p className="empty-note" role="status">{t("loading")}</p> : (

@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { Role } from "@/lib/db-enums";
 
 export const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 export const LOGIN_MAX_ATTEMPTS = 5;
@@ -30,12 +30,38 @@ export function safeReturnPath(value: string | null | undefined): string | null 
   }
 }
 
+export function removeLocalePrefix(value: string): string {
+  let path = value;
+  while (/^\/(?:en|ar)(?=\/|$)/.test(path)) {
+    path = path.replace(/^\/(?:en|ar)(?=\/|$)/, "");
+  }
+  return path || "/";
+}
+
 export function getPostLoginPath(
   mustChangePassword: boolean,
   callbackUrl: string | null | undefined,
 ): string {
   if (mustChangePassword) return "/change-password";
-  return safeReturnPath(callbackUrl) ?? "/dashboard";
+  const safePath = safeReturnPath(callbackUrl);
+  return safePath ? removeLocalePrefix(safePath) : "/dashboard";
+}
+
+export function isSignInSuccess(result: { ok?: boolean; error?: string } | null | undefined): boolean {
+  return result?.ok === true && !result.error;
+}
+
+export function isCredentialSignInFailure(
+  result: { error?: string; code?: string } | null | undefined,
+): boolean {
+  return (result?.error === "CredentialsSignin"
+    && !getLoginErrorReference(result.code))
+    || result?.code === "account-disabled"
+    || result?.code?.startsWith("try-again-") === true;
+}
+
+export function getLoginErrorReference(code: string | undefined): string | null {
+  return code?.match(/^login-error-([a-f0-9]{8})$/)?.[1] ?? null;
 }
 
 export function lockoutMinutes(attempts: Date[], now = Date.now()): number | null {

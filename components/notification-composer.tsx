@@ -3,11 +3,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useLocale, useTranslations } from "next-intl";
-import { getCommitteeLabel } from "@/data/committees";
+import { CommitteeSelect } from "@/components/committee-select";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 type Audience = "EVERYONE" | "ROLE" | "COMMITTEE" | "USERS";
-type Committee = { id: string; name: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 type UserOption = { id: string; name: string; email: string };
 type HistoryItem = {
   id: string;
@@ -23,7 +23,7 @@ type HistoryItem = {
 
 const typeOptions = ["ANNOUNCEMENT", "NEW_EVENT", "EVENT_REMINDER", "SESSION_OPENED", "ATTENDANCE_CONFIRMED", "ATTENDANCE_REJECTED", "ABSENCE_WARNING", "ACCOUNT_CREATED", "PASSWORD_CHANGED", "ROLE_CHANGED", "EXCUSE_DECISION"] as const;
 
-export function NotificationComposer({ role, committees, users }: { role: Role; committees: Committee[]; users: UserOption[] }) {
+export function NotificationComposer({ role, committees, users }: { role: Role; committees: DbCommittee[]; users: UserOption[] }) {
   const showToast = useAppToast();
   const t = useTranslations("site.notifications");
   const locale = useLocale();
@@ -114,7 +114,14 @@ export function NotificationComposer({ role, committees, users }: { role: Role; 
             {role === "LEADER" && <option value="COMMITTEE">{t("myCommittee")}</option>}
           </select></label>
           {audience === "ROLE" && <label>{t("role")}<select value={audienceRole} onChange={(event) => setAudienceRole(event.target.value as Role)}><option value="ADMIN">{t("roleOptions.ADMIN")}</option><option value="LEADER">{t("roleOptions.LEADER")}</option><option value="MEMBER">{t("roleOptions.MEMBER")}</option></select></label>}
-          {audience === "COMMITTEE" && <label>{t("committee")}<select value={committeeId} onChange={(event) => setCommitteeId(event.target.value)} required>{committees.map((committee) => <option value={committee.id} key={committee.id}>{getCommitteeLabel(committee.name, locale as "en" | "ar")}</option>)}</select></label>}
+          {audience === "COMMITTEE" && <label>{t("committee")}<CommitteeSelect
+            committees={committees}
+            value={committeeId}
+            onChange={(v) => setCommitteeId(Array.isArray(v) ? "" : (v ?? ""))}
+            mode="single"
+            required
+            disabled={role === "LEADER"}
+          /></label>}
           {audience === "USERS" && <label className="admin-form-wide">{t("recipients")}<select multiple value={userIds} onChange={(event) => setUserIds(Array.from(event.target.selectedOptions, (option) => option.value))}>{users.map((user) => <option value={user.id} key={user.id}>{user.name} — {user.email}</option>)}</select></label>}
           <label>{t("schedule")}<input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} /></label>
           <label className="visibility-control"><input type="checkbox" checked={important} onChange={(event) => setImportant(event.target.checked)} />{t("importantToggle")}</label>

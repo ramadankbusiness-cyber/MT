@@ -3,9 +3,10 @@
 import { FormEvent, useState } from "react";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useTranslations } from "next-intl";
+import { CommitteeSelect } from "@/components/committee-select";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
-type Committee = { id: string; name: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 export type AdminUserRow = {
   id: string;
   name: string;
@@ -20,11 +21,14 @@ export type AdminUserRow = {
 const initialForm = { name: "", email: "", role: "MEMBER" as Role, committeeId: "" };
 const parseRole = (value: string): Role => value === "ADMIN" || value === "LEADER" || value === "MEMBER" ? value : "MEMBER";
 
-export function AdminUserManager({ initialUsers, committees }: { initialUsers: AdminUserRow[]; committees: Committee[] }) {
+export function AdminUserManager({ initialUsers, committees, userRole, userCommitteeId }: { initialUsers: AdminUserRow[]; committees: DbCommittee[]; userRole?: Role; userCommitteeId?: string | null }) {
   const t = useTranslations("site.adminPages.users");
   const showToast = useAppToast();
   const [users, setUsers] = useState(initialUsers);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(() => ({
+  ...initialForm,
+  ...(userRole === "LEADER" && userCommitteeId ? { committeeId: userCommitteeId } : {}),
+}));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
@@ -105,7 +109,14 @@ export function AdminUserManager({ initialUsers, committees }: { initialUsers: A
           <label>{t("name")}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required minLength={2} maxLength={100} /></label>
           <label>{t("email")}<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required maxLength={254} /></label>
           <label>{t("role")}<select value={form.role} onChange={(event) => setForm({ ...form, role: parseRole(event.target.value) })}><option value="MEMBER">{t("member")}</option><option value="LEADER">{t("leader")}</option><option value="ADMIN">{t("admin")}</option></select></label>
-          <label>{t("committee")}<select value={form.committeeId} onChange={(event) => setForm({ ...form, committeeId: event.target.value })} disabled={form.role === "ADMIN"} required={form.role !== "ADMIN"}><option value="">{t("chooseCommittee")}</option>{committees.map((committee) => <option key={committee.id} value={committee.id}>{committee.name}</option>)}</select></label>
+          <label>{t("committee")}<CommitteeSelect
+            committees={committees}
+            value={form.committeeId ?? ""}
+            onChange={(v) => setForm({ ...form, committeeId: Array.isArray(v) ? "" : (v ?? "") })}
+            mode="single"
+            required={form.role !== "ADMIN"}
+            disabled={form.role === "ADMIN" || (userRole === "LEADER" && userCommitteeId ? true : false)}
+          /></label>
         </div>
         <p className="empty-note">{t("temporaryInfo")}</p>
         {message && <p className="form-message" role="status">{message}</p>}
@@ -124,6 +135,8 @@ export function AdminUserManager({ initialUsers, committees }: { initialUsers: A
               onUpdate={(changes) => void updateUser(user.id, changes)}
               onReset={() => void resetPassword(user.id)}
               onRemove={() => void removeUser(user)}
+              userRole={userRole}
+              userCommitteeId={userCommitteeId}
             />
           ))}
           {!users.length && <p className="empty-note">{t("empty")}</p>}
@@ -139,24 +152,36 @@ function UserAdminRow({
   onUpdate,
   onReset,
   onRemove,
+  userRole,
+  userCommitteeId,
 }: {
   user: AdminUserRow;
-  committees: Committee[];
+  committees: DbCommittee[];
   onUpdate: (changes: { isActive: boolean } | { role: Role; committeeId: string | null }) => void;
   onReset: () => void;
   onRemove: () => void;
+  userRole?: Role;
+  userCommitteeId?: string | null;
 }) {
   const t = useTranslations("site.adminPages.users");
   const [role, setRole] = useState(user.role);
-  const [committeeId, setCommitteeId] = useState(user.committeeId ?? "");
+  const isLeader = userRole === "LEADER";
+  const lockedCommittee = isLeader && userCommitteeId ? userCommitteeId : null;
+  const [committeeId, setCommitteeId] = useState(lockedCommittee ?? user.committeeId ?? "");
   return (
     <article className="user-admin-row">
       <div className="user-admin-identity"><strong>{user.name}</strong><span>{user.email}</span></div>
       <div className="user-admin-status"><span>{user.committee?.name ?? t("noCommittee")}</span><span>{user.isActive ? t("active") : t("inactive")}{user.mustChangePassword ? t("passwordRequired") : ""}</span></div>
       <div className="user-role-controls">
         <label><span className="sr-only">{t("roleFor", { name: user.name })}</span><select value={role} onChange={(event) => setRole(parseRole(event.target.value))}><option value="ADMIN">{t("admin")}</option><option value="LEADER">{t("leader")}</option><option value="MEMBER">{t("member")}</option></select></label>
-        <label><span className="sr-only">{t("committeeFor", { name: user.name })}</span><select value={committeeId} disabled={role === "ADMIN"} onChange={(event) => setCommitteeId(event.target.value)}><option value="">{t("chooseCommittee")}</option>{committees.map((committee) => <option key={committee.id} value={committee.id}>{committee.name}</option>)}</select></label>
-        <button type="button" className="button button-secondary" onClick={() => onUpdate({ role, committeeId: role === "ADMIN" ? null : committeeId || null })}>{t("saveRole")}</button>
+        <label><span className="sr-only">{t("committeeFor", { name: user.name })}</span><CommitteeSelect
+          committees={committees}
+          value={committeeId}
+          onChange={(v) => setCommitteeId(Array.isArray(v) ? "" : (v ?? ""))}
+          mode="single"
+          disabled={role === "ADMIN" || (isLeader && userCommitteeId ? true : false)}
+        /></label>
+        <button type="button" className="button button-secondary" onClick={() => onUpdate({ role, committeeId: role === "ADMIN" ? null : (isLeader ? userCommitteeId ?? null : committeeId || null) })}>{t("saveRole")}</button>
       </div>
       <div className="user-admin-actions">
         <button type="button" className="button button-secondary" onClick={() => onUpdate({ isActive: !user.isActive })}>{user.isActive ? t("deactivate") : t("reactivate")}</button>

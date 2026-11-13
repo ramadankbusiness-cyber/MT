@@ -5,8 +5,9 @@ import { useAppToast } from "@/components/app-toast-provider";
 import { useLocale, useTranslations } from "next-intl";
 import { getCommitteeLabel } from "@/data/committees";
 import ZoneCapture, { type ZoneCaptureValue } from "@/components/zone-capture";
+import { CommitteeSelect } from "@/components/committee-select";
 
-type Committee = { id: string; name: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 export type ManagedEvent = {
   id: string;
   title: string;
@@ -44,12 +45,15 @@ const emptyForm = {
 };
 const localInput = (date: string | Date | null) => date ? new Date(date).toISOString().slice(0, 16) : "";
 
-export function AdminEventManager({ initialEvents, committees, isAdmin }: { initialEvents: ManagedEvent[]; committees: Committee[]; isAdmin: boolean }) {
+export function AdminEventManager({ initialEvents, committees, isAdmin, userRole, userCommitteeId }: { initialEvents: ManagedEvent[]; committees: DbCommittee[]; isAdmin: boolean; userRole?: "ADMIN" | "LEADER" | "MEMBER"; userCommitteeId?: string | null }) {
   const showToast = useAppToast();
   const t = useTranslations("site.pages.eventManager");
   const locale = useLocale();
   const [events, setEvents] = useState(initialEvents);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => ({
+    ...emptyForm,
+    ...(userRole === "LEADER" && userCommitteeId ? { committeeId: userCommitteeId } : {}),
+  }));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -74,7 +78,7 @@ export function AdminEventManager({ initialEvents, committees, isAdmin }: { init
       const payload = {
         ...form, startsAt: new Date(form.startsAt).toISOString(),
         endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
-        location: form.location || null, committeeId: isAdmin ? form.committeeId || null : committees[0]?.id,
+        location: form.location || null, committeeId: userRole === "LEADER" ? userCommitteeId : isAdmin ? form.committeeId || null : null,
         centerLat: zoneValue.latitude, centerLng: zoneValue.longitude, radiusMeters: zoneValue.radiusMeters,
         locationAccuracy: zoneValue.accuracy, placeName: form.placeName || null,
       };
@@ -126,7 +130,13 @@ export function AdminEventManager({ initialEvents, committees, isAdmin }: { init
           <label>{t("location")}<input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} maxLength={250} /></label>
           <ZoneCapture value={{ ...zoneValue, placeName: form.placeName }} onChange={(value) => setZoneValue(value)} />
           <label>{t("placeName")}<input value={form.placeName ?? ""} onChange={(event) => setForm({ ...form, placeName: event.target.value || null })} maxLength={100} /></label>
-          {isAdmin && <label>{t("committee")}<select value={form.committeeId} onChange={(event) => setForm({ ...form, committeeId: event.target.value })}><option value="">{t("allMembers")}</option>{committees.map((committee) => <option value={committee.id} key={committee.id}>{getCommitteeLabel(committee.name, locale as "en" | "ar")}</option>)}</select></label>}
+          <label>{t("committee")}<CommitteeSelect
+            committees={committees}
+            value={form.committeeId ?? ""}
+            onChange={(v) => setForm({ ...form, committeeId: Array.isArray(v) ? "" : (v ?? "") })}
+            mode="single"
+            disabled={userRole === "LEADER"}
+          /></label>
           {formLanguage === "en"
             ? <label className="admin-form-wide">{t("descriptionEn")}<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} required maxLength={2000} rows={4} /></label>
             : <label className="admin-form-wide" lang="ar">{t("descriptionAr")}<textarea value={form.descriptionAr} onChange={(event) => setForm({ ...form, descriptionAr: event.target.value })} dir="rtl" maxLength={2000} rows={4} /></label>}

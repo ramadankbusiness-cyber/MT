@@ -32,7 +32,7 @@ export default async function AdminUsersPage({ params }: Props) {
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
         <div className="section-heading"><p className="eyebrow">{t("eyebrow")}</p><h1>{t("title")}</h1><p className="section-lead">{t("lead")}</p></div>
-        <AdminUserManager initialUsers={users} committees={committees} />
+        <AdminUserManager initialUsers={users} committees={committees} userRole={access.user.role} userCommitteeId={access.user.committeeId} />
       </section>
     </main>
   );

@@ -41,15 +41,36 @@
       "ctaText": "Membership is free and open to everyone who loves learning.",
       "ctaButton": "Join MT Club",
       "stats": [
-        { "value": "250+", "label": "Members" },
-        { "value": "40+", "label": "Events held" },
-        { "value": "15", "label": "Projects shipped" },
-        { "value": "12", "label": "Partners" }
+        {
+          "value": "250+",
+          "label": "Members"
+        },
+        {
+          "value": "40+",
+          "label": "Events held"
+        },
+        {
+          "value": "15",
+          "label": "Projects shipped"
+        },
+        {
+          "value": "12",
+          "label": "Partners"
+        }
       ],
       "features": [
-        { "title": "Learn", "description": "Build practical skills through workshops led by people who love to share what they know." },
-        { "title": "Build", "description": "Turn ideas into real projects, side by side with a team that helps you move forward." },
-        { "title": "Connect", "description": "Meet curious people, find your collaborators and make room for new perspectives." }
+        {
+          "title": "Learn",
+          "description": "Build practical skills through workshops led by people who love to share what they know."
+        },
+        {
+          "title": "Build",
+          "description": "Turn ideas into real projects, side by side with a team that helps you move forward."
+        },
+        {
+          "title": "Connect",
+          "description": "Meet curious people, find your collaborators and make room for new perspectives."
+        }
       ]
     },
     "about": {
@@ -171,7 +192,12 @@
     "committeeUi": {
       "selected": "Selected committees",
       "remove": "Remove {committee}",
-      "chooseLimit": "Choose between 1 and 3 committees."
+      "chooseLimit": "Choose between 1 and 3 committees.",
+      "all": "All committees",
+      "chooseCommittee": "Choose a committee",
+      "loadFailed": "Failed to load committees.",
+      "retry": "Retry",
+      "loading": "Loading…"
     },
     "notifications": {
       "filter": "Filter by type",
@@ -242,8 +268,12 @@
         "ROLE_CHANGED": "Role changed",
         "EXCUSE_DECISION": "Excuse decision"
       },
-      "roleOptions": { "ADMIN": "Admin", "LEADER": "Leader", "MEMBER": "Member" }
-      ,"english": "English",
+      "roleOptions": {
+        "ADMIN": "Admin",
+        "LEADER": "Leader",
+        "MEMBER": "Member"
+      },
+      "english": "English",
       "arabic": "Arabic",
       "titleEnglish": "Title (English)",
       "titleArabic": "Title (Arabic)",
@@ -450,73 +480,6 @@
         "instagram": "Instagram"
       },
       "teamManager": {
-        "english": "English",
-        "arabic": "Arabic",
-        "controls": "ADMIN CONTROLS",
-        "manage": "Manage the team",
-        "add": "Add person",
-        "drag": "Drag to reorder",
-        "visible": "Visible",
-        "hidden": "Hidden",
-        "moveUp": "Move {name} up",
-        "moveDown": "Move {name} down",
-        "removeConfirm": "Remove {name} from the team page?",
-        "removeError": "Could not remove this person.",
-        "orderError": "Could not save the new team order.",
-        "empty": "No people added yet. Create the first public team entry above.",
-        "edit": "Edit team member",
-        "addTitle": "Add a team member",
-        "name": "Full name",
-        "titleEn": "Title (English)",
-        "titleAr": "Title (Arabic)",
-        "titlePlaceholder": "e.g. HEAD MTC",
-        "committee": "Committee",
-        "chooseCommittee": "Choose committee",
-        "photo": "Photo (JPG, PNG or WebP; up to 5 MB)",
-        "bioEn": "Short bio (English)",
-        "bioAr": "Short bio (Arabic)",
-        "website": "Website",
-        "linkedin": "LinkedIn",
-        "instagram": "Instagram",
-        "show": "Show this person on the public page",
-        "save": "Save person",
-        "saving": "Saving…",
-        "cancel": "Cancel",
-        "remove": "Remove",
-        "editButton": "Edit",
-        "saveError": "Could not save this team member. Please try again."
-      },
-      "eventManager": {
-        "english": "English",
-        "arabic": "Arabic",
-        "edit": "Edit event",
-        "create": "Create an event",
-        "titleEn": "Event title (English)",
-        "titleAr": "Event title (Arabic)",
-        "starts": "Starts at",
-        "ends": "Ends at (optional)",
-        "location": "Location",
-        "committee": "Committee",
-        "allMembers": "All members",
-        "descriptionEn": "Description (English)",
-        "descriptionAr": "Description (Arabic)",
-        "publish": "Publish this event",
-        "save": "Save changes",
-        "createButton": "Create event",
-        "saving": "Saving…",
-        "cancel": "Cancel",
-        "events": "Events",
-        "deleteConfirm": "Delete \"{title}\"?",
-        "deleteError": "Could not delete the event.",
-        "noLocation": "No location",
-        "published": "Published",
-        "draft": "Draft",
-        "empty": "No events have been added yet.",
-        "saveError": "Could not save this event. Please try again.",
-        "delete": "Delete",
-        "editButton": "Edit"
-      },
-      "teamManager": {
         "controls": "ADMIN CONTROLS",
         "manage": "Manage the team",
         "add": "Add person",
@@ -548,7 +511,9 @@
         "saving": "Saving…",
         "remove": "Remove",
         "editButton": "Edit",
-        "saveError": "Could not save this team member. Please try again."
+        "saveError": "Could not save this team member. Please try again.",
+        "english": "English",
+        "arabic": "Arabic"
       },
       "eventManager": {
         "edit": "Edit event",

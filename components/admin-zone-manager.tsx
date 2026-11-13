@@ -4,13 +4,14 @@ import dynamic from "next/dynamic";
 import { FormEvent, useState } from "react";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useTranslations } from "next-intl";
+import { CommitteeSelect } from "@/components/committee-select";
 
 const ZoneMapPicker = dynamic(() => import("./zone-map-picker"), { ssr: false, loading: () => <div className="zone-map-loading">Loading OpenStreetMap…</div> });
-type Committee = { id: string; name: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 type Zone = { id: string; name: string; latitude: number; longitude: number; radiusMeters: number; committeeId: string | null; committee: { name: string } | null };
 const defaultPoint = { latitude: 30.0444, longitude: 31.2357 };
 
-export function AdminZoneManager({ initialZones, committees }: { initialZones: Zone[]; committees: Committee[] }) {
+export function AdminZoneManager({ initialZones, committees }: { initialZones: Zone[]; committees: DbCommittee[] }) {
   const t = useTranslations("site.adminPages.zones");
   const showToast = useAppToast();
   const [zones, setZones] = useState(initialZones);
@@ -81,7 +82,14 @@ export function AdminZoneManager({ initialZones, committees }: { initialZones: Z
         <ZoneMapPicker {...point} radiusMeters={radiusMeters} onPick={setPoint} />
         <div className="admin-form-grid">
           <label>{t("name")}<input value={name} onChange={(event) => setName(event.target.value)} required minLength={2} maxLength={100} /></label>
-          <label>{t("committee")}<select value={committeeId} onChange={(event) => setCommitteeId(event.target.value)}><option value="">{t("all")}</option>{committees.map((committee) => <option value={committee.id} key={committee.id}>{committee.name}</option>)}</select></label>
+          <label>{t("committee")}<CommitteeSelect
+            committees={committees}
+            value={committeeId}
+            onChange={(v) => setCommitteeId(Array.isArray(v) ? "" : (v ?? ""))}
+            mode="single"
+            showAll={true}
+            allLabel={t("all")}
+          /></label>
           <label>{t("latitude")}<input type="number" step="any" min={-90} max={90} value={point.latitude} onChange={(event) => setPoint({ ...point, latitude: Number(event.target.value) })} required /></label>
           <label>{t("longitude")}<input type="number" step="any" min={-180} max={180} value={point.longitude} onChange={(event) => setPoint({ ...point, longitude: Number(event.target.value) })} required /></label>
           <label>{t("radius")}<input type="number" min={5} max={5000} value={radiusMeters} onChange={(event) => setRadiusMeters(Number(event.target.value))} required /></label>

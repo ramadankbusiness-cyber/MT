@@ -1,8 +1,12 @@
-import "dotenv/config";
-import { PrismaClient, Role } from "@prisma/client";
+import dotenv from "dotenv";
+import { PrismaClient } from "../lib/generated/prisma";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
-import { CLUB_COMMITTEES } from "../data/committees";
+import { CLUB_COMMITTEES, committeeDetails } from "../data/committees";
+import { Role } from "../lib/db-enums";
+
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
 const prisma = new PrismaClient();
 const emailFor = (value: string) => value.trim().toLowerCase();
@@ -30,16 +34,16 @@ async function seedAccount(input: {
     select: { id: true },
   });
   console.info(`Created ${input.role.toLowerCase()} account: ${email}`);
-  console.info(`Temporary password for ${email}: ${input.password}`);
   return user.id;
 }
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminName = process.env.ADMIN_NAME;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminEmail || !adminName || !adminPassword || adminPassword.length < 12) {
-    throw new Error("Set ADMIN_NAME, ADMIN_EMAIL, and an ADMIN_PASSWORD of at least 12 characters before seeding.");
+  const admin = await prisma.user.findFirst({
+    where: { role: Role.ADMIN, isActive: true },
+    select: { id: true },
+  });
+  if (!admin) {
+    throw new Error("Create the initial Admin account first by running `npm run seed:admin`.");
   }
 
   for (const [legacyName, canonicalName] of [["Leadership", "OC"], ["Technology", "Tech"]] as const) {
@@ -61,24 +65,19 @@ async function main() {
     ]);
   }
 
-  for (const name of CLUB_COMMITTEES) {
-    await prisma.committee.upsert({ where: { name }, update: {}, create: { name } });
+  for (const [index, name] of CLUB_COMMITTEES.entries()) {
+    const detail = committeeDetails[name];
+    await prisma.committee.upsert({
+      where: { key: detail.key },
+      update: { name, nameAr: detail.nameAr, descriptionEn: detail.description, descriptionAr: detail.descriptionAr, order: index },
+      create: { key: detail.key, name, nameAr: detail.nameAr, descriptionEn: detail.description, descriptionAr: detail.descriptionAr, order: index },
+    });
   }
   const [oc, tech] = await Promise.all([
     prisma.committee.findUniqueOrThrow({ where: { name: "OC" } }),
     prisma.committee.findUniqueOrThrow({ where: { name: "Tech" } }),
   ]);
 
-  const normalizedAdminEmail = emailFor(adminEmail);
-  const existingAdmin = await prisma.user.findUnique({ where: { email: normalizedAdminEmail }, select: { id: true } });
-  if (existingAdmin) {
-    await prisma.user.update({
-      where: { id: existingAdmin.id },
-      data: { name: adminName, role: Role.ADMIN, committeeId: null },
-    });
-  } else {
-    await seedAccount({ name: adminName, email: normalizedAdminEmail, role: Role.ADMIN, password: adminPassword });
-  }
   const leaders = [
     { name: "OC Committee Lead", email: "leader.leadership@example.com", committeeId: oc.id },
     { name: "Tech Committee Lead", email: "leader.technology@example.com", committeeId: tech.id },
@@ -104,7 +103,6 @@ async function main() {
     });
   }
 
-  const admin = await prisma.user.findUniqueOrThrow({ where: { email: normalizedAdminEmail }, select: { id: true } });
   const sampleEvents = [
     { title: "Community Welcome Session", daysFromNow: 14, location: "Main Hall", description: "Meet the community, explore the club, and find your next opportunity to learn and build." },
     { title: "Project Collaboration Workshop", daysFromNow: 28, location: "Main Hall", description: "A hands-on workshop for members to form teams and start shaping collaborative projects." },

@@ -46,10 +46,11 @@ export default async function AttendancePage({ params }: Props) {
     },
     orderBy: { startsAt: "desc" },
   });
-  const [committees, members] = user.role === "ADMIN" ? await Promise.all([
-    listClubCommittees(),
-    prisma.user.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, committeeId: true, committee: { select: { name: true } } } }),
-  ]) : [[], []];
+  const isAdmin = user.role === "ADMIN";
+  const [committees, members] = await Promise.all([
+    listClubCommittees(isAdmin ? undefined : user.committeeId),
+    isAdmin ? prisma.user.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, committeeId: true, committee: { select: { name: true } } } }) : Promise.resolve([]),
+  ]);
   const sessionViews: AttendanceSessionView[] = sessions.map((session) => ({
     id: session.id,
     title: session.title,
@@ -70,7 +71,7 @@ export default async function AttendancePage({ params }: Props) {
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
         <div className="section-heading"><p className="eyebrow">{user.role === "ADMIN" ? "ADMIN" : "LEADER"} · {t("eyebrow")}</p><h1>{t("sessionsTitle")}</h1><p className="section-lead">{t("lead")}</p></div>
-        <AttendanceTools role={user.role} initialSessions={sessionViews} committees={committees} members={members} records={[]} attendanceRate={0} />
+        <AttendanceTools role={user.role} initialSessions={sessionViews} committees={committees} members={members} records={[]} attendanceRate={0} userRole={user.role} userCommitteeId={user.committeeId} />
       </section>
     </main>
   );

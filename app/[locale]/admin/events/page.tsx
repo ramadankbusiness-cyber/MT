@@ -38,7 +38,7 @@ export default async function AdminEventsPage({ params }: Props) {
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
         <div className="section-heading"><p className="eyebrow">{t("eyebrow")}</p><h1>{t("title")}</h1><p className="section-lead">{t("lead")}</p></div>
-        <AdminEventManager initialEvents={events} committees={committees} isAdmin={isAdmin} />
+        <AdminEventManager initialEvents={events} committees={committees} isAdmin={isAdmin} userRole={access.user.role} userCommitteeId={access.user.committeeId} />
       </section>
     </main>
   );

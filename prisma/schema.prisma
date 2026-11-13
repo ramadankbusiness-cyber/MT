@@ -60,15 +60,20 @@ enum NotificationAudience {
 }
 
 model Committee {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  users     User[]
-  team      TeamMember[]
-  events    Event[]
-  sessions  AttendanceSession[]
-  zones     Zone[]
+  id            String   @id @default(cuid())
+  key           String   @unique
+  name          String   @unique
+  nameAr        String
+  descriptionEn String?  @db.VarChar(2000)
+  descriptionAr String?  @db.VarChar(2000)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  users         User[]
+  team          TeamMember[]
+  events        Event[]
+  sessions      AttendanceSession[]
+  zones         Zone[]
   notifications Notification[]
 }
 

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   authenticateCredentials,
+  getLoginErrorReference,
+  isCredentialSignInFailure,
   getPostLoginPath,
+  isSignInSuccess,
   LOGIN_MAX_ATTEMPTS,
+  removeLocalePrefix,
   safeReturnPath,
   type LoginAccount,
 } from "../../lib/login";
@@ -78,6 +82,29 @@ describe("credential login", () => {
 });
 
 describe("login destinations", () => {
+  it("does not treat an HTTP-success Auth.js response containing a credential error as login success", () => {
+    expect(isSignInSuccess({ ok: true })).toBe(true);
+    expect(isSignInSuccess({ ok: true, error: "CredentialsSignin" })).toBe(false);
+    expect(isSignInSuccess({ ok: false })).toBe(false);
+    expect(isSignInSuccess(undefined)).toBe(false);
+  });
+
+  it("distinguishes invalid credentials from Auth.js configuration and server errors", () => {
+    expect(isCredentialSignInFailure({ error: "CredentialsSignin" })).toBe(true);
+    expect(isCredentialSignInFailure({ code: "account-disabled" })).toBe(true);
+    expect(isCredentialSignInFailure({ code: "try-again-15" })).toBe(true);
+    expect(isCredentialSignInFailure({ error: "Configuration" })).toBe(false);
+    expect(isCredentialSignInFailure({ error: "AccessDenied" })).toBe(false);
+    expect(isCredentialSignInFailure(undefined)).toBe(false);
+  });
+
+  it("extracts only opaque login error references and does not misclassify them as bad credentials", () => {
+    expect(getLoginErrorReference("login-error-a1b2c3d4")).toBe("a1b2c3d4");
+    expect(getLoginErrorReference("login-error-PrismaClient")).toBeNull();
+    expect(getLoginErrorReference(undefined)).toBeNull();
+    expect(isCredentialSignInFailure({ error: "CredentialsSignin", code: "login-error-a1b2c3d4" })).toBe(false);
+  });
+
   it("accepts only safe same-site relative paths", () => {
     expect(safeReturnPath("/attendance?session=next")).toBe("/attendance?session=next");
     expect(safeReturnPath("//example.com")).toBeNull();
@@ -85,8 +112,18 @@ describe("login destinations", () => {
     expect(safeReturnPath("https://example.com")).toBeNull();
   });
 
+  it("removes an existing locale prefix before locale-aware navigation", () => {
+    expect(removeLocalePrefix("/en/dashboard")).toBe("/dashboard");
+    expect(removeLocalePrefix("/en/en/dashboard")).toBe("/dashboard");
+    expect(removeLocalePrefix("/ar/admin/users?tab=active")).toBe("/admin/users?tab=active");
+    expect(removeLocalePrefix("/en")).toBe("/");
+    expect(removeLocalePrefix("/dashboard")).toBe("/dashboard");
+  });
+
   it("returns to the requested page or the dashboard and prioritizes forced password changes", () => {
     expect(getPostLoginPath(false, "/profile")).toBe("/profile");
+    expect(getPostLoginPath(false, "/en/dashboard")).toBe("/dashboard");
+    expect(getPostLoginPath(false, "/ar/admin/reports")).toBe("/admin/reports");
     expect(getPostLoginPath(false, "//example.com")).toBe("/dashboard");
     expect(getPostLoginPath(true, "/profile")).toBe("/change-password");
   });

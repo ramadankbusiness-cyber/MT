@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
-import { safeReturnPath } from "@/lib/login";
+import { removeLocalePrefix, safeReturnPath } from "@/lib/login";
 import { routing } from "@/i18n/routing";
 
 const handleI18nRouting = createMiddleware(routing);
@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
 
   const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
   if (!token?.id) {
-    const callbackUrl = safeReturnPath(`${request.nextUrl.pathname}${request.nextUrl.search}`);
+    const callbackUrl = safeReturnPath(removeLocalePrefix(`${request.nextUrl.pathname}${request.nextUrl.search}`));
     const loginUrl = new URL(`/${locale}/login`, request.url);
     if (callbackUrl) loginUrl.searchParams.set("callbackUrl", callbackUrl);
     loginUrl.searchParams.set("message", "login-required");
