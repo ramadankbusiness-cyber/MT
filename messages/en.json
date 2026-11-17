@@ -96,7 +96,9 @@
     "team": {
       "eyebrow": "MEET THE COMMUNITY",
       "title": "The people behind the club",
-      "lead": "A small team with big curiosity, bringing people together to make the club happen."
+      "lead": "A small team with big curiosity, bringing people together to make the club happen.",
+      "mtcTitle": "MTC",
+      "mtcSubtitle": "The heads of the team"
     },
     "join": {
       "eyebrow": "YOUR NEXT CHAPTER",
@@ -197,7 +199,8 @@
       "chooseCommittee": "Choose a committee",
       "loadFailed": "Failed to load committees.",
       "retry": "Retry",
-      "loading": "Loading…"
+      "loading": "Loading…",
+      "empty": "No committees are available right now."
     },
     "notifications": {
       "filter": "Filter by type",
@@ -280,7 +283,15 @@
       "messageEnglish": "Message (English)",
       "messageArabic": "Message (Arabic)",
       "previewTitle": "Your notification title",
-      "previewMessage": "Your message preview appears here."
+      "previewMessage": "Your message preview appears here.",
+      "mtcHeads": "MTC (club heads)",
+      "byPosition": "By position (Heads / Vices / Leaders)",
+      "position": "Position",
+      "positionOptions": {
+        "HEAD": "Heads",
+        "VICE": "Vices",
+        "LEADER": "Leaders"
+      }
     },
     "attendance": {
       "create": "Create attendance session",
@@ -513,7 +524,14 @@
         "editButton": "Edit",
         "saveError": "Could not save this team member. Please try again.",
         "english": "English",
-        "arabic": "Arabic"
+        "arabic": "Arabic",
+        "position": "Position",
+        "isMtc": "Part of MTC / Club heads",
+        "mtcFilter": "MTC",
+        "allPositions": "All positions",
+        "allMtc": "All",
+        "mtcOnly": "MTC only",
+        "nonMtc": "Non-MTC"
       },
       "eventManager": {
         "edit": "Edit event",
@@ -626,7 +644,9 @@
         "resetError": "Could not reset the password.",
         "resetDone": "Password reset. Share this temporary password securely.",
         "deleteError": "Could not delete the account.",
-        "temporaryPassword": "Temporary password:"
+        "temporaryPassword": "Temporary password:",
+        "position": "Position",
+        "isMtc": "Part of MTC / Club heads"
       },
       "zones": {
         "eyebrow": "ATTENDANCE SETUP",
@@ -684,6 +704,11 @@
         "excused": "Excused",
         "empty": "No members match this report."
       }
+    },
+    "positions": {
+      "HEAD": "Head",
+      "VICE": "Vice",
+      "LEADER": "Leader"
     }
   },
   "common": {

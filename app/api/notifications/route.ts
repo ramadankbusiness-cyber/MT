@@ -90,6 +90,8 @@ async function POSTInternal(request: Request) {
     return NextResponse.json({ error: "Choose a committee for this audience." }, { status: 400 });
   } else if (input.audience === "USERS" && !input.userIds?.length) {
     return NextResponse.json({ error: "Select at least one recipient." }, { status: 400 });
+  } else if (input.audience === "POSITION" && !input.audiencePosition) {
+    return NextResponse.json({ error: "Choose a position for this audience." }, { status: 400 });
   }
 
   if (input.committeeId && !(await isClubCommitteeId(input.committeeId))) {
@@ -101,6 +103,8 @@ async function POSTInternal(request: Request) {
       ...(input.audience === "ROLE" && input.audienceRole ? { role: input.audienceRole } : {}),
       ...(input.audience === "COMMITTEE" && input.committeeId ? { committeeId: input.committeeId } : {}),
       ...(input.audience === "USERS" ? { id: { in: input.userIds ?? [] } } : {}),
+      ...(input.audience === "MTC" ? { isMTC: true } : {}),
+      ...(input.audience === "POSITION" && input.audiencePosition ? { position: input.audiencePosition } : {}),
     },
     select: { id: true, notificationPreferences: { where: { type: input.type }, select: { inApp: true, push: true } } },
   });
@@ -120,7 +124,8 @@ async function POSTInternal(request: Request) {
         link: input.link ?? null,
         type: input.type,
         audience: input.audience,
-        audienceRole: input.audienceRole ?? null,
+        audienceRole: input.audience === "ROLE" ? input.audienceRole ?? null : null,
+        audiencePosition: input.audience === "POSITION" ? input.audiencePosition ?? null : null,
         committeeId: input.audience === "COMMITTEE" ? input.committeeId ?? null : null,
         important: input.important,
         scheduledAt,

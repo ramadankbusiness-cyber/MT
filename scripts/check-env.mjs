@@ -11,15 +11,17 @@ const required = [
   "DATABASE_PROVIDER",
   "AUTH_SECRET",
   "AUTH_URL",
-  "NEXT_PUBLIC_SITE_URL",
-  "NEXT_PUBLIC_API_URL",
+  "NEXT_PUBLIC_APP_URL",
   "ADMIN_EMAIL",
 ];
+
 
 const missing = [];
 for (const name of required) {
   const value = process.env[name];
   if (!value) {
+    // Allow legacy SITE_URL to satisfy APP_URL in older local setups.
+    if (name === "NEXT_PUBLIC_APP_URL" && process.env.NEXT_PUBLIC_SITE_URL) continue;
     missing.push(name);
     continue;
   }

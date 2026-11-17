@@ -69,10 +69,15 @@ async function main() {
     const detail = committeeDetails[name];
     await prisma.committee.upsert({
       where: { key: detail.key },
-      update: { name, nameAr: detail.nameAr, descriptionEn: detail.description, descriptionAr: detail.descriptionAr, order: index },
-      create: { key: detail.key, name, nameAr: detail.nameAr, descriptionEn: detail.description, descriptionAr: detail.descriptionAr, order: index },
+      update: { name, nameAr: detail.nameAr, type: "committee", descriptionEn: detail.description, descriptionAr: detail.descriptionAr, order: index + 1 },
+      create: { key: detail.key, name, nameAr: detail.nameAr, type: "committee", descriptionEn: detail.description, descriptionAr: detail.descriptionAr, order: index + 1 },
     });
   }
+  const mtcCommittee = await prisma.committee.upsert({
+    where: { key: "mtc" },
+    update: { name: "MTC", nameAr: "MTC", type: "board", descriptionEn: "Club heads / leadership board.", descriptionAr: "هيدات الفريق / مجلس قيادة النادي.", order: 0 },
+    create: { key: "mtc", name: "MTC", nameAr: "MTC", type: "board", descriptionEn: "Club heads / leadership board.", descriptionAr: "هيدات الفريق / مجلس قيادة النادي.", order: 0 },
+  });
   const [oc, tech] = await Promise.all([
     prisma.committee.findUniqueOrThrow({ where: { name: "OC" } }),
     prisma.committee.findUniqueOrThrow({ where: { name: "Tech" } }),
@@ -124,14 +129,15 @@ async function main() {
   }
 
   const teamSeed = [
-    { name: "Baher Alaa", title: "Head, MT Club", committeeId: oc.id, bio: "Bringing the club's people and ideas together." },
-    { name: "Laila Ziad", title: "Vice Head, MT Club", committeeId: oc.id, bio: "Helping the community learn and grow together." },
-    { name: "Mahmoud Sameh", title: "Head, Tech", committeeId: tech.id, bio: "Leading the club's technology committee." },
-    { name: "Ramadan Kamal", title: "Vice Head, Tech", committeeId: tech.id, bio: "Building thoughtful technology experiences." },
+    { name: "Baher Alaa", title: "HEAD MTC", position: "HEAD" as const, isMTC: true, committeeId: mtcCommittee.id, bio: "Bringing the club's people and ideas together." },
+    { name: "Laila Ziad", title: "Vice Head, MT Club", position: "VICE" as const, isMTC: false, committeeId: oc.id, bio: "Helping the community learn and grow together." },
+    { name: "Mahmoud Sameh", title: "Head, Tech", position: "HEAD" as const, isMTC: false, committeeId: tech.id, bio: "Leading the club's technology committee." },
+    { name: "Ramadan Kamal", title: "Vice Head, Tech", position: "VICE" as const, isMTC: false, committeeId: tech.id, bio: "Building thoughtful technology experiences." },
   ];
-  for (const entry of teamSeed) {
-    const existing = await prisma.teamMember.findFirst({ where: { name: entry.name, title: entry.title } });
-    if (!existing) await prisma.teamMember.create({ data: { ...entry, order: teamSeed.indexOf(entry) } });
+  for (const [index, entry] of teamSeed.entries()) {
+    const existing = await prisma.teamMember.findFirst({ where: { name: entry.name } });
+    if (!existing) await prisma.teamMember.create({ data: { ...entry, order: index } });
+    else await prisma.teamMember.update({ where: { id: existing.id }, data: { ...entry, order: index } });
   }
 }
 

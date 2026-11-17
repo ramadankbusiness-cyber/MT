@@ -51,3 +51,20 @@ backend/config/*service-account*.json
 android/
 ios/
 .capacitor/
+
+# Local/test artifacts (do not commit)
+test-results/
+playwright-report/
+blob-report/
+public/uploads/
+.github/agents/
+
+# Local database backups - NEVER commit
+/backups/
+
+# Temporary database hardening scripts
+/staging/
+
+# Generated test coverage reports
+/coverage/
+/backend/coverage/

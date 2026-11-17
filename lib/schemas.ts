@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { CLUB_COMMITTEES } from "../data/committees";
+import { CLUB_COMMITTEES, POSITION_VALUES } from "../data/committees";
+
+export const positionSchema = z.enum(POSITION_VALUES);
 
 export const joinApplicationSchema = z.object({
   name: z.string().trim().min(2).max(100),
@@ -21,29 +23,40 @@ export const forgotPasswordSchema = z.object({
   email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
 });
 
+const strongPasswordSchema = z.string().min(12).max(128).regex(/[a-z]/).regex(/[A-Z]/).regex(/[0-9]/);
+
 export const resetPasswordSchema = z.object({
   token: z.string().min(32).max(256),
-  newPassword: z.string().min(12).max(128).regex(/[a-z]/).regex(/[A-Z]/).regex(/[0-9]/),
+  newPassword: strongPasswordSchema,
 });
 
 export const accountSchema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
   role: z.enum(["ADMIN", "LEADER", "MEMBER"]),
+  position: positionSchema.default("LEADER"),
+  isMTC: z.boolean().default(false),
   committeeId: z.string().trim().min(1).optional().nullable(),
-  temporaryPassword: z.string().min(12).max(128).optional(),
+  temporaryPassword: strongPasswordSchema.optional(),
+}).refine((value) => value.isMTC || value.role === "ADMIN" || !!value.committeeId, {
+  message: "Committee is required unless the account is MTC-only or an admin.",
+  path: ["committeeId"],
 });
 
 export const userRoleUpdateSchema = z.object({
   role: z.enum(["ADMIN", "LEADER", "MEMBER"]),
   committeeId: z.string().nullable().optional(),
+  position: positionSchema.optional(),
+  isMTC: z.boolean().optional(),
 });
 
 export const teamMemberSchema = z.object({
   name: z.string().trim().min(2).max(100),
   title: z.string().trim().min(2).max(100),
   titleAr: z.string().trim().max(100).optional().nullable(),
-  committeeId: z.string().min(1),
+  position: positionSchema.default("LEADER"),
+  isMTC: z.boolean().default(false),
+  committeeId: z.string().min(1).optional().nullable(),
   bio: z.string().trim().max(500).optional().nullable(),
   bioAr: z.string().trim().max(500).optional().nullable(),
   socialLinks: z.object({
@@ -51,10 +64,13 @@ export const teamMemberSchema = z.object({
     linkedin: z.string().url().max(300).optional().or(z.literal("")),
     instagram: z.string().url().max(300).optional().or(z.literal("")),
   }).optional().nullable(),
-  photoUrl: z.string().url().max(2048).optional().nullable().or(z.literal("")),
+  photoUrl: z.string().max(2048).optional().nullable().or(z.literal("")).refine((value) => !value || value === "" || value.startsWith("/") || /^https?:\/\//i.test(value), "Use a valid image URL or path."),
   order: z.number().int().min(0).max(10000).optional(),
   visible: z.boolean().optional(),
   userId: z.string().optional().nullable(),
+}).refine((value) => value.isMTC || !!value.committeeId, {
+  message: "Committee is required unless the person is MTC-only.",
+  path: ["committeeId"],
 });
 
 export const zoneSchema = z.object({
@@ -119,8 +135,9 @@ export const notificationSchema = z.object({
   messageAr: z.string().trim().max(3000).optional().nullable(),
   link: z.string().startsWith("/").max(500).refine((value) => !value.startsWith("//") && !value.includes("\\"), "Use a same-site link").optional().nullable(),
   type: z.enum(["ANNOUNCEMENT", "NEW_EVENT", "EVENT_REMINDER", "SESSION_OPENED", "ATTENDANCE_CONFIRMED", "ATTENDANCE_REJECTED", "ABSENCE_WARNING", "ACCOUNT_CREATED", "PASSWORD_CHANGED", "ROLE_CHANGED", "EXCUSE_DECISION"]).default("ANNOUNCEMENT"),
-  audience: z.enum(["EVERYONE", "ROLE", "COMMITTEE", "USERS"]),
+  audience: z.enum(["EVERYONE", "ROLE", "COMMITTEE", "USERS", "MTC", "POSITION"]),
   audienceRole: z.enum(["ADMIN", "LEADER", "MEMBER"]).optional(),
+  audiencePosition: positionSchema.optional(),
   committeeId: z.string().optional(),
   userIds: z.array(z.string()).max(500).optional(),
   scheduledAt: z.coerce.date().optional().nullable(),
@@ -140,7 +157,7 @@ export const pushSubscriptionSchema = z.object({
 
 export const passwordSchema = z.object({
   currentPassword: z.string().min(1).max(128),
-  newPassword: z.string().min(12).max(128).regex(/[a-z]/).regex(/[A-Z]/).regex(/[0-9]/),
+  newPassword: strongPasswordSchema,
 });
 
 export const manualAttendanceSchema = z.object({

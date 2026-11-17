@@ -30,7 +30,12 @@ export function ChangePasswordForm() {
       setError(t("error"));
       return;
     }
-    await update();
+    const data = (await response.json().catch(() => null)) as { sessionTransition?: string | null } | null;
+    if (data?.sessionTransition) {
+      await update({ sessionTransition: data.sessionTransition });
+    } else {
+      await update();
+    }
     router.replace("/dashboard");
     router.refresh();
   }

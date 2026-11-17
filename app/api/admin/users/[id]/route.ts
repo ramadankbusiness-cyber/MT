@@ -34,20 +34,25 @@ async function PATCHInternal(request: Request, context: RouteContext) {
   if (!parsed.success) return NextResponse.json({ error: "Choose a valid account role." }, { status: 400 });
   if (id === access.user.id) return NextResponse.json({ error: "You cannot change your own role." }, { status: 400 });
   const { role } = parsed.data;
+  const existingUser = await prisma.user.findUnique({ where: { id }, select: { position: true, isMTC: true } });
+  if (!existingUser) return NextResponse.json({ error: "Account not found." }, { status: 404 });
   const committeeId = parsed.data.committeeId ?? null;
-  if (role !== "ADMIN" && !committeeId) {
+  const position = parsed.data.position ?? existingUser.position;
+  const selectedCommittee = committeeId ? await prisma.committee.findUnique({ where: { id: committeeId }, select: { key: true } }) : null;
+  const isMTC = (parsed.data.isMTC ?? existingUser.isMTC) || selectedCommittee?.key === "mtc";
+  if (role !== "ADMIN" && !committeeId && !isMTC) {
     return NextResponse.json({ error: "Select a committee for this account." }, { status: 400 });
   }
-  if (committeeId && !(await isClubCommitteeId(committeeId))) {
+  if (committeeId && !(await isClubCommitteeId(committeeId, { includeMTC: true }))) {
     return NextResponse.json({ error: "That committee does not exist." }, { status: 400 });
   }
   const updated = await prisma.user.update({
     where: { id },
-    data: { role, committeeId: role === "ADMIN" ? null : committeeId, mustChangePassword: true },
-    select: { id: true, name: true, email: true, role: true, committeeId: true, isActive: true },
+    data: { role, position, isMTC, committeeId: role === "ADMIN" ? null : committeeId, mustChangePassword: true },
+    select: { id: true, name: true, email: true, role: true, position: true, isMTC: true, committeeId: true, isActive: true },
   }).catch(() => null);
   if (!updated) return NextResponse.json({ error: "Account not found." }, { status: 404 });
-  await writeAuditLog({ actorId: access.user.id, action: "user.role.change", targetType: "User", targetId: id, details: { role, committeeId } });
+  await writeAuditLog({ actorId: access.user.id, action: "user.role.change", targetType: "User", targetId: id, details: { role, committeeId, position, isMTC } });
   const notification = await prisma.notification.create({
     data: {
       title: "Your MT Club role has changed",
@@ -71,10 +76,11 @@ async function POSTInternal(_request: Request, context: RouteContext) {
   const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
   if (!user) return NextResponse.json({ error: "Account not found." }, { status: 404 });
   const temporaryPassword = createTemporaryPassword();
+  const temporaryPasswordExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   await prisma.$transaction([
     prisma.user.update({
       where: { id },
-      data: { passwordHash: await bcrypt.hash(temporaryPassword, 12), mustChangePassword: true, sessionVersion: { increment: 1 } },
+      data: { passwordHash: await bcrypt.hash(temporaryPassword, 12), mustChangePassword: true, temporaryPasswordExpiresAt, sessionVersion: { increment: 1 } },
     }),
     prisma.passwordResetToken.deleteMany({ where: { userId: id } }),
   ]);
@@ -91,7 +97,7 @@ async function POSTInternal(_request: Request, context: RouteContext) {
     },
   });
   await dispatchPushNotification(notification.id);
-  return NextResponse.json({ temporaryPassword });
+  return NextResponse.json({ temporaryPassword }, { headers: { "Cache-Control": "no-store" } });
 }
 
 async function DELETEInternal(_request: Request, context: RouteContext) {

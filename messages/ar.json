@@ -96,7 +96,9 @@
     "team": {
       "eyebrow": "تعرّف على مجتمعنا",
       "title": "الأشخاص وراء النادي",
-      "lead": "فريق صغير بطموح كبير، بيجمع الناس وبيخلي أنشطة النادي ممكنة."
+      "lead": "فريق صغير بطموح كبير، بيجمع الناس وبيخلي أنشطة النادي ممكنة.",
+      "mtcTitle": "MTC",
+      "mtcSubtitle": "هيدات الفريق"
     },
     "join": {
       "eyebrow": "خطوتك الجاية",
@@ -197,7 +199,8 @@
       "chooseCommittee": "اختر لجنة",
       "loadFailed": "فشل تحميل اللجان.",
       "retry": "أعد المحاولة",
-      "loading": "يتم التحميل…"
+      "loading": "يتم التحميل…",
+      "empty": "لا توجد لجان متاحة حالياً."
     },
     "notifications": {
       "filter": "تصفية حسب النوع",
@@ -280,7 +283,15 @@
       "messageEnglish": "الرسالة (بالإنجليزية)",
       "messageArabic": "الرسالة (بالعربية)",
       "previewTitle": "عنوان الإشعار",
-      "previewMessage": "هتظهر معاينة رسالتك هنا."
+      "previewMessage": "هتظهر معاينة رسالتك هنا.",
+      "mtcHeads": "MTC (هيدات الفريق)",
+      "byPosition": "حسب المنصب (هيد / فايس / ليدر)",
+      "position": "المنصب",
+      "positionOptions": {
+        "HEAD": "هيد",
+        "VICE": "فايس",
+        "LEADER": "ليدر"
+      }
     },
     "attendance": {
       "create": "إنشاء جلسة حضور",
@@ -513,7 +524,14 @@
         "editButton": "تعديل",
         "saveError": "ما قدرناش نحفظ بيانات عضو الفريق. حاول مرة تانية.",
         "english": "English",
-        "arabic": "Arabic"
+        "arabic": "Arabic",
+        "position": "المنصب",
+        "isMtc": "جزء من MTC / هيدات النادي",
+        "mtcFilter": "MTC",
+        "allPositions": "كل المناصب",
+        "allMtc": "الكل",
+        "mtcOnly": "MTC فقط",
+        "nonMtc": "غير MTC"
       },
       "eventManager": {
         "edit": "تعديل الفعالية",
@@ -626,7 +644,9 @@
         "resetError": "ما قدرناش نعيد تعيين كلمة المرور.",
         "resetDone": "تمت إعادة تعيين كلمة المرور. شارك كلمة المرور المؤقتة بأمان.",
         "deleteError": "ما قدرناش نحذف الحساب.",
-        "temporaryPassword": "كلمة المرور المؤقتة:"
+        "temporaryPassword": "كلمة المرور المؤقتة:",
+        "position": "المنصب",
+        "isMtc": "جزء من MTC / هيدات النادي"
       },
       "zones": {
         "eyebrow": "إعداد الحضور",
@@ -684,6 +704,11 @@
         "excused": "بعذر",
         "empty": "مافيش أعضاء مطابقين للتقرير ده."
       }
+    },
+    "positions": {
+      "HEAD": "هيد",
+      "VICE": "فايس",
+      "LEADER": "ليدر"
     }
   },
   "common": {

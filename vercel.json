@@ -1,21 +1,5 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/((?!join(?:/|$)|auth(?:/|$)|admin(?:/|$)|team(?:/|$)|profile(?:/|$)|events(?:/|$)|attendance(?:/|$)|excuses(?:/|$)|notifications(?:/|$)|push(?:/|$)|cron(?:/|$)).*)",
-      "destination": "backend/server.js"
-    }
-  ],
+  "buildCommand": "npm run build",
   "crons": [
     { "path": "/api/cron/notifications", "schedule": "* * * * *" }
   ]

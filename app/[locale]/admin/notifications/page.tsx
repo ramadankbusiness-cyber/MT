@@ -20,7 +20,7 @@ export default async function AdminNotificationsPage({ params }: Props) {
   if ("error" in access) redirect(access.status === 401 ? "/login?message=login-required" : "/forbidden");
   const isAdmin = access.user.role === "ADMIN";
   const [committees, users] = await Promise.all([
-    listClubCommittees(isAdmin ? undefined : access.user.committeeId),
+    listClubCommittees(isAdmin ? undefined : access.user.committeeId, { includeMTC: isAdmin }),
     prisma.user.findMany({
       where: { isActive: true, ...(isAdmin ? {} : { committeeId: access.user.committeeId }) },
       orderBy: { name: "asc" },

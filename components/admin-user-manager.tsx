@@ -1,43 +1,77 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useAppToast } from "@/components/app-toast-provider";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { CommitteeSelect } from "@/components/committee-select";
+import { getPositionLabel, type PositionLevel } from "@/data/committees";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
-type DbCommittee = { id: string; key: string; name: string; nameAr: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string; type?: string };
 export type AdminUserRow = {
   id: string;
   name: string;
   email: string;
   role: Role;
+  position?: PositionLevel;
+  isMTC?: boolean;
   committeeId: string | null;
-  committee: { name: string } | null;
+  committee: { id?: string; key?: string; name: string; nameAr?: string } | null;
   isActive: boolean;
   mustChangePassword: boolean;
 };
 
-const initialForm = { name: "", email: "", role: "MEMBER" as Role, committeeId: "" };
 const parseRole = (value: string): Role => value === "ADMIN" || value === "LEADER" || value === "MEMBER" ? value : "MEMBER";
+const defaultRoleForPosition = (position: PositionLevel): Role => (position === "HEAD" || position === "VICE" || position === "LEADER") ? "LEADER" : "MEMBER";
 
 export function AdminUserManager({ initialUsers, committees, userRole, userCommitteeId }: { initialUsers: AdminUserRow[]; committees: DbCommittee[]; userRole?: Role; userCommitteeId?: string | null }) {
   const t = useTranslations("site.adminPages.users");
+  const locale = useLocale() as "en" | "ar";
   const showToast = useAppToast();
   const [users, setUsers] = useState(initialUsers);
-  const [form, setForm] = useState(() => ({
-  ...initialForm,
-  ...(userRole === "LEADER" && userCommitteeId ? { committeeId: userCommitteeId } : {}),
-}));
+  const [form, setForm] = useState({ name: "", email: "", role: "MEMBER" as Role, position: "LEADER" as PositionLevel, isMTC: false, committeeId: userRole === "LEADER" && userCommitteeId ? userCommitteeId : "" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [showTempDialog, setShowTempDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      setTemporaryPassword("");
+      setShowTempDialog(false);
+    };
+  }, []);
+
+  function clearTemporaryPassword() {
+    setTemporaryPassword("");
+    setShowTempDialog(false);
+    setCopied(false);
+  }
+
+  function revealTemporaryPassword(password: string) {
+    setCopied(false);
+    setTemporaryPassword(password);
+    setShowTempDialog(true);
+  }
+
+  async function copyTemporaryPassword() {
+    if (!temporaryPassword) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(temporaryPassword);
+        setCopied(true);
+      }
+    } catch {
+      setCopied(false);
+    }
+  }
 
   async function createUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
-    setTemporaryPassword("");
+    clearTemporaryPassword();
     try {
       const response = await fetch("/api/admin/users", {
         method: "POST",
@@ -46,11 +80,11 @@ export function AdminUserManager({ initialUsers, committees, userRole, userCommi
       });
       const result = await response.json();
       if (!response.ok) throw new Error("create-failed");
-      const committee = committees.find((entry) => entry.id === result.user.committeeId);
-      setUsers((current) => [...current, { ...result.user, committee: committee ? { name: committee.name } : null, isActive: true, mustChangePassword: true }]);
-      setTemporaryPassword(result.temporaryPassword);
+      const committee = committees.find((entry) => entry.id === result.user.committeeId) ?? null;
+      setUsers((current) => [...current, { ...result.user, committee, isActive: true, mustChangePassword: true }]);
+      revealTemporaryPassword(result.temporaryPassword);
       setMessage(t("created", { email: result.user.email }));
-      setForm(initialForm);
+      setForm({ name: "", email: "", role: "MEMBER", position: "LEADER", isMTC: false, committeeId: "" });
     } catch {
       const errorMessage = t("createError");
       setMessage(errorMessage);
@@ -60,7 +94,7 @@ export function AdminUserManager({ initialUsers, committees, userRole, userCommi
     }
   }
 
-  async function updateUser(id: string, changes: { isActive: boolean } | { role: Role; committeeId: string | null }) {
+  async function updateUser(id: string, changes: { isActive: boolean } | { role: Role; position: PositionLevel; isMTC: boolean; committeeId: string | null }) {
     setMessage("");
     const response = await fetch(`/api/admin/users/${id}`, {
       method: "PATCH",
@@ -80,13 +114,11 @@ export function AdminUserManager({ initialUsers, committees, userRole, userCommi
   }
 
   async function resetPassword(id: string) {
+    clearTemporaryPassword();
     const response = await fetch(`/api/admin/users/${id}`, { method: "POST" });
     const result = await response.json();
-    if (!response.ok) {
-      setMessage(t("resetError"));
-      return;
-    }
-    setTemporaryPassword(result.temporaryPassword);
+    if (!response.ok) { setMessage(t("resetError")); return; }
+    revealTemporaryPassword(result.temporaryPassword);
     setMessage(t("resetDone"));
     setUsers((current) => current.map((user) => user.id === id ? { ...user, mustChangePassword: true } : user));
   }
@@ -94,10 +126,7 @@ export function AdminUserManager({ initialUsers, committees, userRole, userCommi
   async function removeUser(user: AdminUserRow) {
     if (!window.confirm(t("deleteConfirm", { name: user.name }))) return;
     const response = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
-    if (!response.ok) {
-      setMessage(t("deleteError"));
-      return;
-    }
+    if (!response.ok) { setMessage(t("deleteError")); return; }
     setUsers((current) => current.filter((entry) => entry.id !== user.id));
   }
 
@@ -109,18 +138,24 @@ export function AdminUserManager({ initialUsers, committees, userRole, userCommi
           <label>{t("name")}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required minLength={2} maxLength={100} /></label>
           <label>{t("email")}<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required maxLength={254} /></label>
           <label>{t("role")}<select value={form.role} onChange={(event) => setForm({ ...form, role: parseRole(event.target.value) })}><option value="MEMBER">{t("member")}</option><option value="LEADER">{t("leader")}</option><option value="ADMIN">{t("admin")}</option></select></label>
+          <label>{t("position") ?? "Position"}<select value={form.position} onChange={(event) => { const position = event.target.value as PositionLevel; setForm({ ...form, position, role: defaultRoleForPosition(position) }); }}><option value="HEAD">{getPositionLabel("HEAD", locale)}</option><option value="VICE">{getPositionLabel("VICE", locale)}</option><option value="LEADER">{getPositionLabel("LEADER", locale)}</option></select></label>
+          <label className="visibility-control"><input type="checkbox" checked={form.isMTC} onChange={(event) => setForm({ ...form, isMTC: event.target.checked })} />{t("isMtc") ?? "Part of MTC / Club heads"}</label>
           <label>{t("committee")}<CommitteeSelect
             committees={committees}
+            includeMTC
             value={form.committeeId ?? ""}
-            onChange={(v) => setForm({ ...form, committeeId: Array.isArray(v) ? "" : (v ?? "") })}
+            onChange={(v) => {
+              const committeeId = Array.isArray(v) ? "" : (v ?? "");
+              const selected = committees.find((c) => c.id === committeeId);
+              setForm({ ...form, committeeId, isMTC: selected?.key === "mtc" ? true : form.isMTC });
+            }}
             mode="single"
-            required={form.role !== "ADMIN"}
+            required={form.role !== "ADMIN" && !form.isMTC}
             disabled={form.role === "ADMIN" || (userRole === "LEADER" && userCommitteeId ? true : false)}
           /></label>
         </div>
         <p className="empty-note">{t("temporaryInfo")}</p>
         {message && <p className="form-message" role="status">{message}</p>}
-        {temporaryPassword && <p className="temporary-password"><strong>{t("temporaryPassword")}</strong> <code>{temporaryPassword}</code></p>}
         <button className="button button-primary" type="submit" disabled={busy}>{busy ? t("creating") : t("create")}</button>
       </form>
 
@@ -142,46 +177,58 @@ export function AdminUserManager({ initialUsers, committees, userRole, userCommi
           {!users.length && <p className="empty-note">{t("empty")}</p>}
         </div>
       </section>
+
+      {showTempDialog && temporaryPassword && (
+        <div className="temp-password-dialog-backdrop" role="presentation" onClick={clearTemporaryPassword}>
+          <dialog open className="temp-password-dialog" aria-label={t("temporaryPassword")} onClick={(event) => event.stopPropagation()}>
+            <h3>{t("temporaryPassword")}</h3>
+            <p className="empty-note">{t("temporaryInfo")}</p>
+            <p className="temporary-password"><code>{temporaryPassword}</code></p>
+            <div className="user-admin-actions">
+              <button type="button" className="button button-secondary" onClick={() => void copyTemporaryPassword()}>{copied ? "Copied" : "Copy"}</button>
+              <button type="button" className="button button-primary" onClick={clearTemporaryPassword}>Close</button>
+            </div>
+          </dialog>
+        </div>
+      )}
     </div>
   );
 }
 
-function UserAdminRow({
-  user,
-  committees,
-  onUpdate,
-  onReset,
-  onRemove,
-  userRole,
-  userCommitteeId,
-}: {
-  user: AdminUserRow;
-  committees: DbCommittee[];
-  onUpdate: (changes: { isActive: boolean } | { role: Role; committeeId: string | null }) => void;
-  onReset: () => void;
-  onRemove: () => void;
-  userRole?: Role;
-  userCommitteeId?: string | null;
-}) {
+function UserAdminRow({ user, committees, onUpdate, onReset, onRemove, userRole, userCommitteeId }: { user: AdminUserRow; committees: DbCommittee[]; onUpdate: (changes: { isActive: boolean } | { role: Role; position: PositionLevel; isMTC: boolean; committeeId: string | null }) => void; onReset: () => void; onRemove: () => void; userRole?: Role; userCommitteeId?: string | null }) {
   const t = useTranslations("site.adminPages.users");
-  const [role, setRole] = useState(user.role);
+  const locale = useLocale() as "en" | "ar";
+  const [role, setRole] = useState<Role>(user.role);
+  const [position, setPosition] = useState<PositionLevel>(user.position ?? "LEADER");
+  const [isMTC, setIsMTC] = useState(!!user.isMTC);
   const isLeader = userRole === "LEADER";
   const lockedCommittee = isLeader && userCommitteeId ? userCommitteeId : null;
   const [committeeId, setCommitteeId] = useState(lockedCommittee ?? user.committeeId ?? "");
   return (
     <article className="user-admin-row">
       <div className="user-admin-identity"><strong>{user.name}</strong><span>{user.email}</span></div>
-      <div className="user-admin-status"><span>{user.committee?.name ?? t("noCommittee")}</span><span>{user.isActive ? t("active") : t("inactive")}{user.mustChangePassword ? t("passwordRequired") : ""}</span></div>
+      <div className="user-admin-status"><span>{user.isMTC ? "MTC" : (user.committee?.name ?? t("noCommittee"))}</span><span>{user.isActive ? t("active") : t("inactive")}{user.mustChangePassword ? t("passwordRequired") : ""}</span></div>
       <div className="user-role-controls">
         <label><span className="sr-only">{t("roleFor", { name: user.name })}</span><select value={role} onChange={(event) => setRole(parseRole(event.target.value))}><option value="ADMIN">{t("admin")}</option><option value="LEADER">{t("leader")}</option><option value="MEMBER">{t("member")}</option></select></label>
+        <label><span className="sr-only">{t("position") ?? "Position"}</span><select value={position} onChange={(event) => { const p = event.target.value as PositionLevel; setPosition(p); }}><option value="HEAD">{getPositionLabel("HEAD", locale)}</option><option value="VICE">{getPositionLabel("VICE", locale)}</option><option value="LEADER">{getPositionLabel("LEADER", locale)}</option></select></label>
+        <label className="visibility-control"><input type="checkbox" checked={isMTC} onChange={(e) => setIsMTC(e.target.checked)} /><span>{t("isMtc") ?? "MTC"}</span></label>
         <label><span className="sr-only">{t("committeeFor", { name: user.name })}</span><CommitteeSelect
           committees={committees}
+          includeMTC
           value={committeeId}
-          onChange={(v) => setCommitteeId(Array.isArray(v) ? "" : (v ?? ""))}
+          onChange={(v) => {
+            const nextCommitteeId = Array.isArray(v) ? "" : (v ?? "");
+            const selected = committees.find((c) => c.id === nextCommitteeId);
+            if (selected?.key === "mtc") setIsMTC(true);
+            setCommitteeId(nextCommitteeId);
+          }}
           mode="single"
           disabled={role === "ADMIN" || (isLeader && userCommitteeId ? true : false)}
         /></label>
-        <button type="button" className="button button-secondary" onClick={() => onUpdate({ role, committeeId: role === "ADMIN" ? null : (isLeader ? userCommitteeId ?? null : committeeId || null) })}>{t("saveRole")}</button>
+        <button type="button" className="button button-secondary" onClick={() => {
+          const selected = committees.find((c) => c.id === committeeId);
+          onUpdate({ role, position, isMTC: isMTC || selected?.key === "mtc", committeeId: role === "ADMIN" ? null : (isLeader ? userCommitteeId ?? null : committeeId || null) });
+        }}>{t("saveRole")}</button>
       </div>
       <div className="user-admin-actions">
         <button type="button" className="button button-secondary" onClick={() => onUpdate({ isActive: !user.isActive })}>{user.isActive ? t("deactivate") : t("reactivate")}</button>

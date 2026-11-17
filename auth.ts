@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/schemas";
 import { hashIdentifier, requestIp } from "@/lib/security";
 import { authenticateCredentials, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MS } from "@/lib/login";
+import { verifySessionTransition } from "@/lib/session-transition";
 
 class DisabledAccountSignin extends CredentialsSignin {
   code = "account-disabled";
@@ -59,6 +60,55 @@ function logLoginStep(step: string) {
   }
 }
 
+export async function jwtCallback({ token, user, trigger, session }: { token: any; user?: any; trigger?: string; session?: any }) {
+  try {
+    if (user) {
+      token.id = user.id;
+      token.role = user.role;
+      token.committeeId = user.committeeId;
+      token.mustChangePassword = user.mustChangePassword;
+      token.sessionVersion = user.sessionVersion;
+      token.rememberMe = user.rememberMe ?? false;
+      token.sessionJti = randomUUID();
+    }
+    if (token.id) {
+      if (!token.sessionJti) token.sessionJti = randomUUID();
+      const currentUser = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        select: { role: true, committeeId: true, mustChangePassword: true, sessionVersion: true, isActive: true },
+      });
+      if (!currentUser?.isActive) return null;
+      if (trigger === "update") {
+        const transition = (session as { sessionTransition?: unknown } | undefined)?.sessionTransition;
+        const authorizedTransition =
+          token.sessionVersion !== currentUser.sessionVersion &&
+          verifySessionTransition(transition, {
+            userId: token.id as string,
+            sessionJti: token.sessionJti as string,
+            newSessionVersion: currentUser.sessionVersion,
+          });
+        if (token.sessionVersion !== currentUser.sessionVersion && !authorizedTransition) {
+          return null;
+        }
+        token.role = currentUser.role;
+        token.committeeId = currentUser.committeeId;
+        token.mustChangePassword = currentUser.mustChangePassword;
+        token.sessionVersion = currentUser.sessionVersion;
+        return token;
+      }
+      if (currentUser.sessionVersion !== token.sessionVersion) return null;
+      token.role = currentUser.role;
+      token.committeeId = currentUser.committeeId;
+      token.mustChangePassword = currentUser.mustChangePassword;
+      token.sessionVersion = currentUser.sessionVersion;
+    }
+    return token;
+  } catch (error) {
+    console.error("[auth] JWT callback failed; returning null token.", error);
+    return null;
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
@@ -94,7 +144,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 logLoginStep("querying account");
                 const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
                 logLoginStep(`account query completed; found=${!!user}`);
-                return user;
+                if (!user) return null;
+                return {
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  passwordHash: user.passwordHash,
+                  role: user.role,
+                  committeeId: user.committeeId,
+                  isActive: user.isActive,
+                  mustChangePassword: user.mustChangePassword,
+                  temporaryPasswordExpiresAt: user.temporaryPasswordExpiresAt,
+                  sessionVersion: user.sessionVersion,
+                };
               },
               recentFailures: async (normalizedEmail, hashedIp, since) => {
                 if (isLocalSqliteDevelopment) {
@@ -160,32 +222,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.committeeId = user.committeeId;
-        token.mustChangePassword = user.mustChangePassword;
-        token.sessionVersion = user.sessionVersion;
-        token.rememberMe = user.rememberMe ?? false;
-      }
-      if (token.id) {
-        let currentUser;
-        try {
-          currentUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { role: true, committeeId: true, mustChangePassword: true, sessionVersion: true, isActive: true },
-          });
-        } catch (error) {
-          throw unexpectedLoginSignin(error);
-        }
-        if (!currentUser?.isActive || currentUser.sessionVersion !== token.sessionVersion) return null;
-        token.role = currentUser.role;
-        token.committeeId = currentUser.committeeId;
-        token.mustChangePassword = currentUser.mustChangePassword;
-      }
-      return token;
-    },
+    jwt: jwtCallback,
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
@@ -201,15 +238,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   events: {
     async signOut(message) {
-      if ("token" in message && message.token?.id) {
-        if (isLocalSqliteDevelopment) {
-          logLoginStep("skipping persistent session revocation for local SQLite development");
-          return;
+      try {
+        if ("token" in message && message.token?.id) {
+          if (isLocalSqliteDevelopment) {
+            logLoginStep("skipping persistent session revocation for local SQLite development");
+            return;
+          }
+          await prisma.user.updateMany({
+            where: { id: message.token.id as string },
+            data: { sessionVersion: { increment: 1 } },
+          });
         }
-        await prisma.user.updateMany({
-          where: { id: message.token.id as string },
-          data: { sessionVersion: { increment: 1 } },
-        });
+      } catch (error) {
+        console.error("[auth] signOut event failed.", error);
       }
     },
   },

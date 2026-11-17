@@ -21,6 +21,7 @@ const baseAccount: LoginAccount = {
   committeeId: "committee-1",
   isActive: true,
   mustChangePassword: false,
+  temporaryPasswordExpiresAt: null,
   sessionVersion: 0,
 };
 
@@ -80,6 +81,44 @@ describe("credential login", () => {
     expect(failures).toHaveLength(LOGIN_MAX_ATTEMPTS);
   });
 });
+  it("authenticates a temporary password before it expires", async () => {
+    const tempAccount = {
+      ...baseAccount,
+      mustChangePassword: true,
+      temporaryPasswordExpiresAt: new Date(now + 60_000),
+    };
+    const { dependencies } = createLoginHarness(tempAccount);
+    const result = await authenticateCredentials(
+      { email: tempAccount.email, password: "correct-password", ipHash: "ip-hash", rememberMe: false },
+      dependencies,
+    );
+    expect(result).toEqual({ account: tempAccount, rememberMe: false });
+  });
+
+  it("rejects an expired temporary password with a generic invalid failure", async () => {
+    const expiredAccount = {
+      ...baseAccount,
+      mustChangePassword: true,
+      temporaryPasswordExpiresAt: new Date(now - 1),
+    };
+    const { dependencies } = createLoginHarness(expiredAccount);
+    const result = await authenticateCredentials(
+      { email: expiredAccount.email, password: "correct-password", ipHash: "ip-hash", rememberMe: false },
+      dependencies,
+    );
+    expect(result).toEqual({ failure: "invalid" });
+  });
+
+  it("authenticates a normal password when no temporary expiration exists", async () => {
+    const normalAccount = { ...baseAccount, mustChangePassword: false, temporaryPasswordExpiresAt: null };
+    const { dependencies } = createLoginHarness(normalAccount);
+    const result = await authenticateCredentials(
+      { email: normalAccount.email, password: "correct-password", ipHash: "ip-hash", rememberMe: false },
+      dependencies,
+    );
+    expect(result).toEqual({ account: normalAccount, rememberMe: false });
+  });
+
 
 describe("login destinations", () => {
   it("does not treat an HTTP-success Auth.js response containing a credential error as login success", () => {

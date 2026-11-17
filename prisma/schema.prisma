@@ -15,6 +15,12 @@ enum Role {
   MEMBER
 }
 
+enum Position {
+  HEAD
+  VICE
+  LEADER
+}
+
 enum AttendanceStatus {
   PRESENT
   LATE
@@ -57,6 +63,8 @@ enum NotificationAudience {
   ROLE
   COMMITTEE
   USERS
+  MTC
+  POSITION
 }
 
 model Committee {
@@ -64,6 +72,7 @@ model Committee {
   key           String   @unique
   name          String   @unique
   nameAr        String
+  type          String   @default("committee") @db.VarChar(20)
   descriptionEn String?  @db.VarChar(2000)
   descriptionAr String?  @db.VarChar(2000)
   order         Int      @default(0)
@@ -83,10 +92,13 @@ model User {
   email              String   @unique
   passwordHash       String
   role               Role     @default(MEMBER)
+  position           Position @default(LEADER)
+  isMTC              Boolean  @default(false)
   committeeId        String?
   isActive           Boolean  @default(true)
-  mustChangePassword Boolean  @default(true)
-  sessionVersion     Int      @default(0)
+  mustChangePassword        Boolean   @default(true)
+  temporaryPasswordExpiresAt DateTime?
+  sessionVersion            Int       @default(0)
   phone              String?
   photoUrl           String?
   preferredLanguage  String   @default("en") @db.VarChar(2)
@@ -107,6 +119,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
 
   @@index([committeeId, role, isActive])
+  @@index([isMTC, position])
 }
 
 model TeamMember {
@@ -114,7 +127,9 @@ model TeamMember {
   name        String
   title       String
   titleAr     String?
-  committeeId String
+  position    Position  @default(LEADER)
+  isMTC       Boolean   @default(false)
+  committeeId String?
   bio         String?   @db.VarChar(500)
   bioAr       String?   @db.VarChar(500)
   socialLinks Json?
@@ -124,11 +139,12 @@ model TeamMember {
   userId      String?   @unique
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  committee   Committee @relation(fields: [committeeId], references: [id], onDelete: Restrict)
+  committee   Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
   user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([visible, order])
   @@index([committeeId])
+  @@index([isMTC, position])
 }
 
 model Zone {
@@ -274,25 +290,26 @@ model Excuse {
 }
 
 model Notification {
-  id          String               @id @default(cuid())
-  title       String
-  titleAr     String?
-  message     String   @db.VarChar(3000)
-  messageAr   String?  @db.VarChar(3000)
-  link        String?
-  type        NotificationType
-  audience    NotificationAudience
-  audienceRole Role?
-  committeeId String?
-  important   Boolean              @default(false)
-  scheduledAt DateTime?
-  sentAt      DateTime?
-  createdById String
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  createdBy   User                 @relation("NotificationAuthor", fields: [createdById], references: [id], onDelete: Restrict)
-  committee   Committee?           @relation(fields: [committeeId], references: [id], onDelete: SetNull)
-  recipients  NotificationRecipient[]
+  id              String               @id @default(cuid())
+  title           String
+  titleAr         String?
+  message         String   @db.VarChar(3000)
+  messageAr       String?  @db.VarChar(3000)
+  link            String?
+  type            NotificationType
+  audience        NotificationAudience
+  audienceRole    Role?
+  audiencePosition Position?
+  committeeId     String?
+  important       Boolean              @default(false)
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  createdById     String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  createdBy       User                 @relation("NotificationAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  committee       Committee?           @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  recipients      NotificationRecipient[]
 
   @@index([scheduledAt, sentAt])
   @@index([createdAt])

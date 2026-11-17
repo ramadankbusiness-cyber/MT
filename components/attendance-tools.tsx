@@ -120,6 +120,7 @@ function SessionManager({ sessions: initialSessions, committees, members, isAdmi
           <label>{t("title")}<input value={title} onChange={(event) => setTitle(event.target.value)} minLength={2} maxLength={120} required /></label>
           <label>{t("committee")}<CommitteeSelect
             committees={committees}
+            includeMTC={isAdmin}
             value={committeeId}
             onChange={(v) => setCommitteeId(Array.isArray(v) ? "" : (v ?? ""))}
             mode="single"

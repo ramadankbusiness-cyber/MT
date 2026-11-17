@@ -6,7 +6,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { CommitteeSelect } from "@/components/committee-select";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
-type Audience = "EVERYONE" | "ROLE" | "COMMITTEE" | "USERS";
+type Position = "HEAD" | "VICE" | "LEADER";
+type Audience = "EVERYONE" | "ROLE" | "COMMITTEE" | "USERS" | "MTC" | "POSITION";
 type DbCommittee = { id: string; key: string; name: string; nameAr: string };
 type UserOption = { id: string; name: string; email: string };
 type HistoryItem = {
@@ -36,6 +37,7 @@ export function NotificationComposer({ role, committees, users }: { role: Role; 
   const [type, setType] = useState("ANNOUNCEMENT");
   const [audience, setAudience] = useState<Audience>(role === "LEADER" ? "COMMITTEE" : "EVERYONE");
   const [audienceRole, setAudienceRole] = useState<Role>("MEMBER");
+  const [audiencePosition, setAudiencePosition] = useState<Position>("HEAD");
   const [committeeId, setCommitteeId] = useState(committees[0]?.id ?? "");
   const [userIds, setUserIds] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -59,6 +61,7 @@ export function NotificationComposer({ role, committees, users }: { role: Role; 
     const payload = {
       title, titleAr: titleAr || null, message, messageAr: messageAr || null, link: link || null, type, audience,
       audienceRole: audience === "ROLE" ? audienceRole : undefined,
+      audiencePosition: audience === "POSITION" ? audiencePosition : undefined,
       committeeId: audience === "COMMITTEE" ? committeeId : undefined,
       userIds: audience === "USERS" ? userIds : undefined,
       scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
@@ -110,12 +113,14 @@ export function NotificationComposer({ role, committees, users }: { role: Role; 
             : <label className="admin-form-wide" lang="ar">{t("messageArabic")}<textarea value={messageAr} onChange={(event) => setMessageAr(event.target.value)} dir="rtl" rows={4} maxLength={3000} /></label>}
           <label>{t("link")}<input value={link} onChange={(event) => setLink(event.target.value)} placeholder="/events" /></label>
           <label>{t("audience")}<select value={audience} disabled={role === "LEADER"} onChange={(event) => setAudience(event.target.value as Audience)}>
-            <option value="EVERYONE">{t("everyone")}</option>{role === "ADMIN" && <><option value="ROLE">{t("byRole")}</option><option value="COMMITTEE">{t("byCommittee")}</option><option value="USERS">{t("specificUsers")}</option></>}
+            <option value="EVERYONE">{t("everyone")}</option>{role === "ADMIN" && <><option value="ROLE">{t("byRole")}</option><option value="COMMITTEE">{t("byCommittee")}</option><option value="MTC">{t("mtcHeads") ?? "MTC (club heads)"}</option><option value="POSITION">{t("byPosition") ?? "By position"}</option><option value="USERS">{t("specificUsers")}</option></>}
             {role === "LEADER" && <option value="COMMITTEE">{t("myCommittee")}</option>}
           </select></label>
           {audience === "ROLE" && <label>{t("role")}<select value={audienceRole} onChange={(event) => setAudienceRole(event.target.value as Role)}><option value="ADMIN">{t("roleOptions.ADMIN")}</option><option value="LEADER">{t("roleOptions.LEADER")}</option><option value="MEMBER">{t("roleOptions.MEMBER")}</option></select></label>}
+          {audience === "POSITION" && <label>{t("position") ?? "Position"}<select value={audiencePosition} onChange={(event) => setAudiencePosition(event.target.value as Position)}><option value="HEAD">{locale === "ar" ? "هيد" : "Heads"}</option><option value="VICE">{locale === "ar" ? "فايس" : "Vices"}</option><option value="LEADER">{locale === "ar" ? "ليدر" : "Leaders"}</option></select></label>}
           {audience === "COMMITTEE" && <label>{t("committee")}<CommitteeSelect
             committees={committees}
+            includeMTC={role === "ADMIN"}
             value={committeeId}
             onChange={(v) => setCommitteeId(Array.isArray(v) ? "" : (v ?? ""))}
             mode="single"
@@ -127,7 +132,7 @@ export function NotificationComposer({ role, committees, users }: { role: Role; 
           <label className="visibility-control"><input type="checkbox" checked={important} onChange={(event) => setImportant(event.target.checked)} />{t("importantToggle")}</label>
         </div>
         <div className="form-actions"><button className="button button-secondary" type="button" onClick={() => setPreview((value) => !value)}>{preview ? t("hidePreview") : t("preview")}</button><button className="button button-primary" type="submit" disabled={busy}>{busy ? t("sending") : scheduledAt ? t("scheduleButton") : t("send")}</button></div>
-        {preview && <aside className="notification-preview-card"><span>{important ? `${t("important")} · ` : ""}{audience === "EVERYONE" ? t("everyone") : audience === "ROLE" ? t("byRole") : audience === "COMMITTEE" ? t("byCommittee") : t("specificUsers")}</span><h3>{(formLanguage === "ar" ? titleAr : title) || t("previewTitle")}</h3><p>{(formLanguage === "ar" ? messageAr : message) || t("previewMessage")}</p>{link && <code>{link}</code>}</aside>}
+        {preview && <aside className="notification-preview-card"><span>{important ? `${t("important")} · ` : ""}{audience === "EVERYONE" ? t("everyone") : audience === "ROLE" ? t("byRole") : audience === "COMMITTEE" ? t("byCommittee") : audience === "MTC" ? (t("mtcHeads") ?? "MTC") : audience === "POSITION" ? (t("byPosition") ?? "Position") : t("specificUsers")}</span><h3>{(formLanguage === "ar" ? titleAr : title) || t("previewTitle")}</h3><p>{(formLanguage === "ar" ? messageAr : message) || t("previewMessage")}</p>{link && <code>{link}</code>}</aside>}
         {notice && <p className="form-message" role="status">{notice}</p>}
       </form>
 

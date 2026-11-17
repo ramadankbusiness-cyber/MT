@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 type DbCommittee = {
@@ -8,6 +8,7 @@ type DbCommittee = {
   key: string;
   name: string;
   nameAr: string;
+  type?: string;
 };
 
 export type CommitteeSelectValue = string | string[] | null;
@@ -26,6 +27,7 @@ interface CommitteeSelectProps {
   name?: string;
   id?: string;
   autoFocus?: boolean;
+  includeMTC?: boolean;
 }
 
 export function CommitteeSelect({
@@ -42,44 +44,66 @@ export function CommitteeSelect({
   name,
   id,
   autoFocus,
+  includeMTC = false,
 }: CommitteeSelectProps) {
   const t = useTranslations("site");
   const locale = useLocale();
   const [committees, setCommittees] = useState<DbCommittee[]>(committeesProp ?? []);
-  const [loading, setLoading] = useState(!committeesProp);
+  const [loading, setLoading] = useState(!committeesProp || committeesProp.length === 0);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (committeesProp) {
-      setCommittees(committeesProp);
-      setLoading(false);
-      return;
-    }
+  const fetchCommittees = (cancelledRef?: { current: boolean }) => {
     setLoading(true);
-    fetch("/api/committees")
+    setError("");
+    fetch(`/api/committees${includeMTC ? "?includeMTC=true" : ""}`, { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load committees");
         return r.json();
       })
       .then((data) => {
-        setCommittees(data.committees ?? []);
+        if (cancelledRef?.current) return;
+        setCommittees(Array.isArray(data?.committees) ? data.committees : []);
         setLoading(false);
-        setError("");
       })
       .catch(() => {
-        setError(t("committeeUi.loadFailed"));
+        if (cancelledRef?.current) return;
+        if (committeesProp && committeesProp.length > 0) {
+          setCommittees(committeesProp);
+          setError("");
+        } else {
+          setError(t("committeeUi.loadFailed"));
+        }
         setLoading(false);
       });
-  }, [committeesProp, t]);
+  };
 
-  const labelFor = (c: DbCommittee) => (locale === "ar" ? c.nameAr : c.name);
+  useEffect(() => {
+    if (committeesProp && committeesProp.length > 0) {
+      setCommittees(committeesProp);
+      setLoading(false);
+      setError("");
+      return;
+    }
+    const cancelled = { current: false };
+    fetchCommittees(cancelled);
+    return () => {
+      cancelled.current = true;
+    };
+  }, [committeesProp, includeMTC, t]);
 
-  const options = showAll
-    ? [{ value: "", label: allLabel ?? t("committeeUi.all") }, ...committees.map((c) => ({ value: c[valueField], label: labelFor(c) }))]
-    : committees.map((c) => ({ value: c[valueField], label: labelFor(c) }));
+  const retryLoad = () => fetchCommittees();
 
-  const valueArray = mode === "multi" ? (Array.isArray(value) ? value : value ? [value] : []) : [];
-  const currentSingle = value === null || value === undefined ? "" : (value as string);
+  const labelFor = (c: DbCommittee) => {
+    if (c.key === "mtc") return "MTC";
+    return locale === "ar" ? c.nameAr : c.name;
+  };
+
+  const mtc = committees.find((c) => c.key === "mtc");
+  const regular = committees.filter((c) => c.key !== "mtc");
+  const valueArray = mode === "multi" ? (Array.isArray(value) ? value : value ? [String(value)] : []) : [];
+  const currentSingle = value === null || value === undefined ? "" : String(value);
+
+  const regularOptions = useMemo(() => regular.map((c) => ({ value: c[valueField] as string, label: labelFor(c) })), [regular, valueField, locale]);
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (mode === "multi") {
@@ -96,23 +120,18 @@ export function CommitteeSelect({
     return (
       <div className="committee-select-error" role="alert">
         <p>{error}</p>
-        <button
-          type="button"
-          onClick={() => {
-            setLoading(true);
-            setError("");
-            fetch("/api/committees")
-              .then((r) => r.json())
-              .then((data) => {
-                setCommittees(data.committees ?? []);
-                setLoading(false);
-              })
-              .catch(() => {
-                setError(t("committeeUi.loadFailed"));
-                setLoading(false);
-              });
-          }}
-        >
+        <button type="button" onClick={retryLoad}>
+          {t("committeeUi.retry")}
+        </button>
+      </div>
+    );
+  }
+
+  if (!loading && committees.length === 0) {
+    return (
+      <div className="committee-select-empty" role="status">
+        <p>{t("committeeUi.empty")}</p>
+        <button type="button" onClick={retryLoad}>
           {t("committeeUi.retry")}
         </button>
       </div>
@@ -133,13 +152,18 @@ export function CommitteeSelect({
         autoFocus={autoFocus}
         dir={locale === "ar" ? "rtl" : "ltr"}
       >
-        {!showAll && (!valueArray.length && mode === "multi" ? <option value="" disabled hidden>{placeholder ?? t("committeeUi.chooseCommittee")}</option> : null)}
-        {!showAll && mode === "single" && (!currentSingle ? <option value="" disabled hidden>{placeholder ?? t("committeeUi.chooseCommittee")}</option> : null)}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        {showAll && <option value="">{allLabel ?? t("committeeUi.all")}</option>}
+        {!showAll && mode === "single" && !currentSingle && <option value="" disabled hidden>{placeholder ?? t("committeeUi.chooseCommittee")}</option>}
+        {!showAll && mode === "multi" && valueArray.length === 0 && <option value="" disabled hidden>{placeholder ?? t("committeeUi.chooseCommittee")}</option>}
+        {includeMTC && mtc && (
+          <optgroup label={locale === "ar" ? "هيدات النادي" : "Club heads"}>
+            <option value={mtc[valueField] as string}>{labelFor(mtc)}</option>
+          </optgroup>
+        )}
+        {regularOptions.length > 0 && (includeMTC && mtc
+          ? <optgroup label={locale === "ar" ? "اللجان" : "Committees"}>{regularOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>
+          : regularOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)
+        )}
       </select>
       {loading && <span className="committee-select-loading">{t("committeeUi.loading")}</span>}
     </label>

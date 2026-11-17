@@ -14,11 +14,21 @@ if (!ADMIN_PASSWORD || ADMIN_PASSWORD.length < 16) {
 
 const prisma = new PrismaClient();
 
+const COMMITTEES = [
+  { key: "oc", name: "OC", nameAr: "اللجنة التنظيمية", descriptionEn: "Organizing", descriptionAr: "تنظيمية", order: 1 },
+  { key: "hr", name: "HR", nameAr: "الموارد البشرية", descriptionEn: "HR", descriptionAr: "موارد", order: 2 },
+  { key: "pr", name: "PR", nameAr: "العلاقات العامة", descriptionEn: "PR", descriptionAr: "علاقات", order: 3 },
+  { key: "tech", name: "Tech", nameAr: "اللجنة التقنية", descriptionEn: "Tech", descriptionAr: "تقنية", order: 4 },
+  { key: "logistics", name: "Logistics", nameAr: "اللوجستيات", descriptionEn: "Logistics", descriptionAr: "لوجستيات", order: 5 },
+  { key: "media", name: "Media", nameAr: "الميديا", descriptionEn: "Media", descriptionAr: "ميديا", order: 6 },
+  { key: "firstaid", name: "First Aid", nameAr: "الإسعافات الأولية", descriptionEn: "First Aid", descriptionAr: "إسعافات", order: 7 },
+] as const;
+
 async function goToLogin(page: Parameters<typeof test>[0]["page"]) {
   await page.goto("/en/login", { waitUntil: "domcontentloaded", timeout: 120000 });
   await page.getByLabel("Email").waitFor({ state: "visible", timeout: 10000 });
   await page.getByRole("button", { name: "Log in" }).waitFor({ state: "visible", timeout: 10000 });
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 }
 
 async function submitCredentials(page: Parameters<typeof test>[0]["page"], email: string, password: string) {
@@ -28,9 +38,8 @@ async function submitCredentials(page: Parameters<typeof test>[0]["page"], email
   try {
     await page.waitForURL(({ pathname }) => !pathname.startsWith("/en/login"), { timeout: 15000 });
   } catch {
-    // If URL didn't change, try direct API call
     if (page.url().includes("/en/login")) {
-      await page.evaluate(async ({email, password}) => {
+      await page.evaluate(async ({ email, password }) => {
         const csrfResponse = await fetch("/api/auth/csrf");
         const csrfData = await csrfResponse.json();
         const response = await fetch("/api/auth/callback/credentials", {
@@ -39,14 +48,12 @@ async function submitCredentials(page: Parameters<typeof test>[0]["page"], email
           body: new URLSearchParams({
             email, password, rememberMe: "false",
             callbackUrl: "/en/dashboard", json: "true",
-            csrfToken: csrfData.csrfToken
-          }).toString()
+            csrfToken: csrfData.csrfToken,
+          }).toString(),
         });
         if (response.ok) {
           const result = await response.json();
-          if (result.ok) {
-            window.location.href = "/en/dashboard";
-          }
+          if (result.ok) window.location.href = "/en/dashboard";
         }
       }, { email, password });
       await page.waitForURL(({ pathname }) => !pathname.startsWith("/en/login"), { timeout: 15000 });
@@ -59,7 +66,7 @@ async function logIn(page: Parameters<typeof test>[0]["page"], email: string, pa
   await submitCredentials(page, email, password);
 }
 
-test.describe("committee zones", () => {
+test.describe("committees", () => {
   test.beforeAll(async () => {
     const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
     await prisma.user.upsert({
@@ -67,54 +74,71 @@ test.describe("committee zones", () => {
       update: { name: "MT Club Admin", role: "ADMIN", isActive: true, mustChangePassword: false, passwordHash },
       create: { name: "MT Club Admin", email: ADMIN_EMAIL, role: "ADMIN", isActive: true, mustChangePassword: false, passwordHash },
     });
+    for (const committee of COMMITTEES) {
+      await prisma.committee.upsert({
+        where: { key: committee.key },
+        update: { name: committee.name, nameAr: committee.nameAr, descriptionEn: committee.descriptionEn, descriptionAr: committee.descriptionAr, order: committee.order },
+        create: committee,
+      });
+    }
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  test("team admin form: create member with committee and verify it shows", async ({ page }) => {
+  test("team admin form: create regular and MTC members with positions", async ({ page }) => {
     await logIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await page.goto("/en/team", { waitUntil: "domcontentloaded" });
 
-    // Go to admin team page
-    await page.goto("/en/admin/team", { waitUntil: "domcontentloaded" });
+    const ts = Date.now();
+    const headName = `E2E Head ${ts}`;
+    await page.getByRole("button", { name: "Add person" }).first().click();
+    await page.getByLabel("Full name").fill(headName);
+    await page.getByLabel("Position").selectOption("HEAD");
+    await page.getByLabel("Part of MTC / Club heads").check();
+    await expect(page.getByLabel("Title (English)")).toHaveValue(/HEAD MTC/i);
+    await page.getByLabel("Title (English)").fill("HEAD MTC");
+    await page.getByRole("button", { name: "Save person" }).click();
+    await expect(page.getByText(headName)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "MTC", exact: true })).toBeVisible();
 
-    // Click add team member
-    await page.getByRole("button", { name: /add person/i }).click();
+    const viceName = `E2E Vice ${ts}`;
+    await page.getByRole("button", { name: "Add person" }).first().click();
+    await page.getByLabel("Full name").fill(viceName);
+    await page.getByLabel("Position").selectOption("VICE");
+    await page.getByLabel("Part of MTC / Club heads").check();
+    await page.getByLabel("Title (English)").fill("VICE MTC");
+    await page.getByRole("button", { name: "Save person" }).click();
+    await expect(page.getByText(viceName)).toBeVisible();
 
-    // Fill in team member form
-    await page.getByLabel("Full name").fill("E2E Test Member");
-    await page.getByLabel("Event title (English)").fill("Test Lead");
+    const leaderName = `E2E Leader ${ts}`;
+    await page.getByRole("button", { name: "Add person" }).first().click();
+    await page.getByLabel("Full name").fill(leaderName);
+    await page.getByLabel("Position").selectOption("LEADER");
+    await page.getByLabel("Committee").selectOption({ label: "OC" });
+    await page.getByLabel("Title (English)").fill("Leader of OC");
+    await page.getByRole("button", { name: "Save person" }).click();
+    await expect(page.getByText(leaderName)).toBeVisible();
+  });
 
-    // Select a committee from the dropdown
-    await page.getByLabel("Committee").click();
-    await page.getByRole("option", { name: "OC", exact: false }).first().click();
-
-    // Save
-    await page.getByRole("button", { name: /save person/i }).click();
-
-    // Verify the member appears
-    await expect(page.getByText("E2E Test Member")).toBeVisible();
-    await expect(page.getByText(/OC/)).toBeVisible();
+  test("join form and about page do not include MTC", async ({ page }) => {
+    await page.goto("/en/join", { waitUntil: "domcontentloaded" });
+    const options = await page.locator("#join-committee option").allTextContents();
+    expect(options.join(" ")).not.toContain("MTC");
+    await page.goto("/en/about", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("body")).not.toContainText("MTC");
   });
 
   test("join form: select committees and submit", async ({ page }) => {
     await page.goto("/en/join", { waitUntil: "domcontentloaded" });
 
-    // Fill in the form
     await page.getByLabel("Full name").fill("Join Test User");
-    await page.getByLabel("Email address").fill("jointest@example.com");
-
-    // Select committees via multi-select
-    await page.selectOption("#join-committee", ["OC", "Tech"]);
-
-    // Fill message
+    await page.getByLabel("Email address").fill(`jointest+${Date.now()}@example.com`);
+    await page.locator("#join-committee").selectOption(["OC", "Tech"]);
     await page.getByLabel("A message for us").fill("I want to join the club!");
-
-    // Submit
     await page.getByRole("button", { name: /send your application/i }).click();
 
-    // Verify success
-    await expect(page.getByText("Thanks for reaching out!")).toBeVisible();
+    await expect(page.getByText(/thanks for reaching out/i)).toBeVisible();
   });
 });

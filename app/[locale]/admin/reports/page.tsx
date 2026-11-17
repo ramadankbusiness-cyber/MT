@@ -59,7 +59,7 @@ export default async function AttendanceReportsPage({ params, searchParams }: Pr
   const rangeStart = invalidRange ? defaultFrom : from;
   const rangeEnd = invalidRange ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)) : to;
 
-  const committees = isAdmin ? await listClubCommittees() : [];
+  const committees = isAdmin ? await listClubCommittees(null, { includeMTC: false }) : [];
   const requestedCommittee = firstValue(query.committeeId);
   const selectedCommittee = isAdmin && requestedCommittee && committees.some((committee) => committee.id === requestedCommittee)
     ? requestedCommittee
@@ -80,7 +80,7 @@ export default async function AttendanceReportsPage({ params, searchParams }: Pr
     }),
     prisma.user.findMany({
       where: { isActive: true, ...userScope },
-      select: { id: true, name: true, email: true, committeeId: true, committee: { select: { name: true } } },
+      select: { id: true, name: true, email: true, committeeId: true, committee: { select: { key: true, name: true } } },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -114,7 +114,7 @@ export default async function AttendanceReportsPage({ params, searchParams }: Pr
     return {
       id: user.id,
       name: user.name,
-      committee: user.committee?.name ?? "Unassigned",
+      committee: user.committee?.key === "mtc" ? "Unassigned" : (user.committee?.name ?? "Unassigned"),
       attended,
       absent: missed,
       excused: excusedCount,
@@ -133,7 +133,7 @@ export default async function AttendanceReportsPage({ params, searchParams }: Pr
       trend.expected += 1;
       const status = recordByPair.get(`${user.id}:${session.id}`) ?? "ABSENT";
       if (status === "PRESENT" || status === "LATE") trend.attended += 1;
-      const committee = user.committee?.name ?? "Unassigned";
+      const committee = user.committee?.key === "mtc" ? "Unassigned" : (user.committee?.name ?? "Unassigned");
       const group = committeeStats.get(committee) ?? { committee, eligible: 0, attended: 0, excused: 0 };
       group.eligible += 1;
       if (status === "PRESENT" || status === "LATE") group.attended += 1;

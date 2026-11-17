@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-guards";
 import { teamMemberSchema } from "@/lib/schemas";
 import { writeAuditLog } from "@/lib/audit";
+import { isClubCommitteeId } from "@/lib/committees";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -13,6 +14,13 @@ async function PATCHInternal(request: Request, context: RouteContext) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = teamMemberSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Check the team member details." }, { status: 400 });
+  if (parsed.data.committeeId && !(await isClubCommitteeId(parsed.data.committeeId, { includeMTC: true }))) {
+    return NextResponse.json({ error: "Choose an existing committee." }, { status: 400 });
+  }
+  const selectedCommittee = parsed.data.committeeId
+    ? await prisma.committee.findUnique({ where: { id: parsed.data.committeeId }, select: { key: true } })
+    : null;
+  const isMTC = parsed.data.isMTC || selectedCommittee?.key === "mtc";
   const { id } = await context.params;
   const member = await prisma.teamMember.update({
     where: { id },
@@ -20,7 +28,9 @@ async function PATCHInternal(request: Request, context: RouteContext) {
       name: parsed.data.name,
       title: parsed.data.title,
       titleAr: parsed.data.titleAr || null,
-      committeeId: parsed.data.committeeId,
+      position: parsed.data.position,
+      isMTC,
+      committeeId: parsed.data.committeeId ?? null,
       bio: parsed.data.bio || null,
       bioAr: parsed.data.bioAr || null,
       socialLinks: parsed.data.socialLinks ?? undefined,
@@ -29,7 +39,7 @@ async function PATCHInternal(request: Request, context: RouteContext) {
       visible: parsed.data.visible,
       userId: parsed.data.userId || null,
     },
-    include: { committee: { select: { name: true } } },
+    include: { committee: { select: { id: true, key: true, name: true, nameAr: true } } },
   }).catch(() => null);
   if (!member) return NextResponse.json({ error: "Team entry not found." }, { status: 404 });
   await writeAuditLog({ actorId: access.user.id, action: "team.update", targetType: "TeamMember", targetId: id });

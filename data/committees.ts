@@ -1,8 +1,26 @@
 export const CLUB_COMMITTEES = ["OC", "HR", "PR", "Tech", "Logistics", "Media", "First Aid"] as const;
 
 export type ClubCommittee = (typeof CLUB_COMMITTEES)[number];
-export type CommitteeIcon = "CalendarCheck" | "Users" | "Handshake" | "Code2" | "Truck" | "Camera" | "HeartPulse";
+export type CommitteeIcon = "CalendarCheck" | "Users" | "Handshake" | "Code2" | "Truck" | "Camera" | "HeartPulse" | "Shield";
 export const COMMITTEE_KEYS = ["oc", "hr", "pr", "tech", "logistics", "media", "firstaid"] as const;
+
+export type CommitteeType = "committee" | "board";
+export type CommitteeSourceEntry = {
+  id?: string;
+  key: string;
+  name: string;
+  nameAr: string;
+  order: number;
+  type: CommitteeType;
+};
+
+export const MTC_COMMITTEE: CommitteeSourceEntry = {
+  key: "mtc",
+  name: "MTC",
+  nameAr: "MTC",
+  order: -1,
+  type: "board",
+};
 
 export const committeeDetails: Record<ClubCommittee, {
   key: (typeof COMMITTEE_KEYS)[number];
@@ -78,8 +96,45 @@ export const committeeDetails: Record<ClubCommittee, {
   },
 };
 
+export function getCommittees(options?: { includeMTC?: boolean }): CommitteeSourceEntry[] {
+  const regular: CommitteeSourceEntry[] = CLUB_COMMITTEES.map((name, index) => ({
+    key: committeeDetails[name].key,
+    name,
+    nameAr: committeeDetails[name].nameAr,
+    order: index + 1,
+    type: "committee",
+  }));
+  return options?.includeMTC ? [MTC_COMMITTEE, ...regular] : regular;
+}
+
+export const POSITION_VALUES = ["HEAD", "VICE", "LEADER"] as const;
+export type PositionLevel = (typeof POSITION_VALUES)[number];
+export const POSITION_ORDER: Record<PositionLevel, number> = { HEAD: 0, VICE: 1, LEADER: 2 };
+export const POSITION_LABELS: Record<PositionLevel, { en: string; ar: string }> = {
+  HEAD: { en: "Head", ar: "هيد" },
+  VICE: { en: "Vice", ar: "فايس" },
+  LEADER: { en: "Leader", ar: "ليدر" },
+};
+
+export function getPositionLabel(position: PositionLevel | string | null | undefined, language: "en" | "ar") {
+  if (!position || !(position in POSITION_LABELS)) return "";
+  return POSITION_LABELS[position as PositionLevel][language];
+}
+
+export function suggestTitle(position: PositionLevel, group: "MTC" | string, language: "en" | "ar" = "en") {
+  const pos = POSITION_LABELS[position][language];
+  if (group === "MTC") {
+    if (language === "ar") return `${pos} MTC`;
+    if (position === "HEAD") return "HEAD MTC";
+    if (position === "VICE") return "VICE MTC";
+    return "LEADER MTC";
+  }
+  return language === "ar" ? `${pos} ${group}` : `${pos} of ${group}`;
+}
+
 export function getCommitteeLabel(name: string | null | undefined, language: "en" | "ar") {
   if (!name) return "";
+  if (name === "MTC") return "MTC";
   const committee = CLUB_COMMITTEES.find((entry) => entry === name);
   if (!committee) return name;
   return language === "ar" ? committeeDetails[committee].fullNameAr : committee;

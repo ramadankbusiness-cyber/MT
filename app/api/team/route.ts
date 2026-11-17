@@ -10,8 +10,8 @@ async function GETInternal() {
   const user = await getCurrentUser();
   const members = await prisma.teamMember.findMany({
     where: user?.role === "ADMIN" && user.isActive && !user.mustChangePassword ? {} : { visible: true },
-    include: { committee: { select: { id: true, name: true } } },
-    orderBy: [{ order: "asc" }, { name: "asc" }],
+    include: { committee: { select: { id: true, key: true, name: true, nameAr: true } } },
+    orderBy: [{ isMTC: "desc" }, { order: "asc" }, { name: "asc" }],
   });
   return NextResponse.json({ members });
 }
@@ -22,22 +22,30 @@ async function POSTInternal(request: Request) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = teamMemberSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Check the team member details." }, { status: 400 });
-  if (!(await isClubCommitteeId(parsed.data.committeeId))) return NextResponse.json({ error: "Choose an existing committee." }, { status: 400 });
+  if (parsed.data.committeeId && !(await isClubCommitteeId(parsed.data.committeeId, { includeMTC: true }))) {
+    return NextResponse.json({ error: "Choose an existing committee." }, { status: 400 });
+  }
+  const selectedCommittee = parsed.data.committeeId
+    ? await prisma.committee.findUnique({ where: { id: parsed.data.committeeId }, select: { key: true } })
+    : null;
+  const isMTC = parsed.data.isMTC || selectedCommittee?.key === "mtc";
   const member = await prisma.teamMember.create({
     data: {
       name: parsed.data.name,
       title: parsed.data.title,
       titleAr: parsed.data.titleAr || null,
-      committeeId: parsed.data.committeeId,
+      position: parsed.data.position,
+      isMTC,
+      committeeId: parsed.data.committeeId ?? null,
       bio: parsed.data.bio || null,
       bioAr: parsed.data.bioAr || null,
       socialLinks: parsed.data.socialLinks ?? undefined,
       photoUrl: parsed.data.photoUrl || null,
-      order: parsed.data.order ?? (await prisma.teamMember.count()),
+      order: parsed.data.order ?? (await prisma.teamMember.count({ where: { isMTC, committeeId: parsed.data.committeeId ?? null } })),
       visible: parsed.data.visible ?? true,
       userId: parsed.data.userId || null,
     },
-    include: { committee: { select: { name: true } } },
+    include: { committee: { select: { id: true, key: true, name: true, nameAr: true } } },
   });
   await writeAuditLog({ actorId: access.user.id, action: "team.create", targetType: "TeamMember", targetId: member.id });
   return NextResponse.json({ member }, { status: 201 });

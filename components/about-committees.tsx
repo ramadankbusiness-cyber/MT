@@ -3,7 +3,7 @@
 import { Link } from "@/i18n/navigation";
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
-import { CalendarCheck, Camera, Code2, Handshake, HeartPulse, Users, Truck, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Camera, Code2, Handshake, HeartPulse, Users, Truck, Shield, type LucideIcon } from "lucide-react";
 import { CLUB_COMMITTEES, committeeDetails, type CommitteeIcon } from "@/data/committees";
 import { useSite } from "@/components/site-provider";
 
@@ -15,6 +15,7 @@ const icons: Record<CommitteeIcon, LucideIcon> = {
   Truck,
   Camera,
   HeartPulse,
+  Shield,
 };
 
 export function AboutCommittees() {

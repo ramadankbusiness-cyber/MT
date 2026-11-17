@@ -12,6 +12,7 @@ export type LoginAccount = {
   committeeId: string | null;
   isActive: boolean;
   mustChangePassword: boolean;
+  temporaryPasswordExpiresAt: Date | null;
   sessionVersion: number;
 };
 
@@ -95,7 +96,12 @@ export async function authenticateCredentials(
     input.password,
     account?.passwordHash ?? dependencies.dummyPasswordHash,
   );
-  const success = !!account && account.isActive && passwordMatches;
+  const temporaryPasswordExpired = !!(
+    account?.mustChangePassword &&
+    account.temporaryPasswordExpiresAt &&
+    account.temporaryPasswordExpiresAt.getTime() <= now
+  );
+  const success = !!account && account.isActive && passwordMatches && !temporaryPasswordExpired;
   await dependencies.recordAttempt(input.email, input.ipHash, success);
 
   if (account && !account.isActive && passwordMatches) return { failure: "disabled" };

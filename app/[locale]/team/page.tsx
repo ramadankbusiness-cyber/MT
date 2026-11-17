@@ -17,10 +17,10 @@ export default async function TeamPage() {
     const [databaseMembers, databaseCommittees] = await Promise.all([
       prisma.teamMember.findMany({
         where: isAdmin ? {} : { visible: true },
-        include: { committee: { select: { name: true } } },
-        orderBy: [{ order: "asc" }, { name: "asc" }],
+        include: { committee: { select: { id: true, key: true, name: true, nameAr: true, type: true } } },
+        orderBy: [{ isMTC: "desc" }, { order: "asc" }, { name: "asc" }],
       }),
-      isAdmin ? listClubCommittees() : Promise.resolve([]),
+      listClubCommittees(null, { includeMTC: isAdmin }),
     ]);
     members = databaseMembers.map((member) => {
       const links = member.socialLinks && typeof member.socialLinks === "object" && !Array.isArray(member.socialLinks)
@@ -28,6 +28,9 @@ export default async function TeamPage() {
         : null;
       return {
         ...member,
+        position: member.position as "HEAD" | "VICE" | "LEADER",
+        isMTC: member.isMTC || member.committee?.key === "mtc",
+        committeeId: member.committeeId,
         socialLinks: links ? {
           website: typeof links.website === "string" ? links.website : undefined,
           linkedin: typeof links.linkedin === "string" ? links.linkedin : undefined,
@@ -41,7 +44,9 @@ export default async function TeamPage() {
     ? fallbackTeam.map((member, index) => ({
       id: `static-${index}`, name: member.name, title: member.title || member.role,
       titleAr: member.roleAr,
-      committeeId: "", committee: { name: member.committee || "OC" }, bio: member.description,
+      position: "LEADER" as const,
+      isMTC: false,
+      committeeId: null, committee: null, bio: member.description,
       bioAr: member.descriptionAr,
       socialLinks: null, photoUrl: member.image || null, order: index, visible: true, userId: null,
     }))
@@ -50,7 +55,7 @@ export default async function TeamPage() {
   return (
     <main id="main-content" className="inner-page">
       <section className="content-section page-intro">
-        <TeamDirectory members={publicMembers} />
+        <TeamDirectory members={publicMembers} committees={committees} />
       </section>
       {isAdmin && <div className="content-section team-manager-section"><TeamManager initialMembers={members} committees={committees} /></div>}
     </main>

@@ -4,7 +4,8 @@ import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import { cairo, inter, spaceGrotesk } from "./fonts";
 
-const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL
+const siteOrigin = process.env.NEXT_PUBLIC_APP_URL
+  || process.env.NEXT_PUBLIC_SITE_URL
   || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
 export const metadata: Metadata = {

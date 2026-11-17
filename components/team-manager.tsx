@@ -1,20 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useAppToast } from "@/components/app-toast-provider";
 import { useLocale, useTranslations } from "next-intl";
-import { getCommitteeLabel } from "@/data/committees";
+import { getCommitteeLabel, getPositionLabel, suggestTitle, POSITION_ORDER, type PositionLevel } from "@/data/committees";
 import { CommitteeSelect } from "@/components/committee-select";
 
-type DbCommittee = { id: string; key: string; name: string; nameAr: string };
+type DbCommittee = { id: string; key: string; name: string; nameAr: string; type?: string };
 export type ManagedTeamMember = {
   id: string;
   name: string;
   title: string;
   titleAr?: string | null;
-  committeeId: string;
-  committee: { name: string };
+  position?: PositionLevel;
+  isMTC?: boolean;
+  committeeId: string | null;
+  committee: { id?: string; key?: string; name: string; nameAr?: string } | null;
   bio: string | null;
   bioAr?: string | null;
   socialLinks: { website?: string; linkedin?: string; instagram?: string } | null;
@@ -24,25 +26,50 @@ export type ManagedTeamMember = {
   userId: string | null;
 };
 
-const blank = { name: "", title: "", titleAr: "", committeeId: "", bio: "", bioAr: "", website: "", linkedin: "", instagram: "", photoUrl: "", visible: true };
+type FormState = {
+  name: string; title: string; titleAr: string; position: PositionLevel; isMTC: boolean; committeeId: string;
+  bio: string; bioAr: string; website: string; linkedin: string; instagram: string; photoUrl: string; visible: boolean;
+};
+const blank: FormState = { name: "", title: "", titleAr: "", position: "LEADER", isMTC: false, committeeId: "", bio: "", bioAr: "", website: "", linkedin: "", instagram: "", photoUrl: "", visible: true };
+
+function groupKey(member: Pick<ManagedTeamMember, "isMTC" | "committeeId">) {
+  return member.isMTC ? "mtc" : (member.committeeId ?? "none");
+}
+
+function compareMembers(a: ManagedTeamMember, b: ManagedTeamMember) {
+  const ap = POSITION_ORDER[a.position ?? "LEADER"] ?? 2;
+  const bp = POSITION_ORDER[b.position ?? "LEADER"] ?? 2;
+  return ap - bp || (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name);
+}
 
 export function TeamManager({ initialMembers, committees }: { initialMembers: ManagedTeamMember[]; committees: DbCommittee[] }) {
   const showToast = useAppToast();
   const t = useTranslations("site.pages.teamManager");
   const locale = useLocale() as "en" | "ar";
   const [members, setMembers] = useState(initialMembers);
-  const [form, setForm] = useState(blank);
+  const regularCommittees = committees.filter((c) => c.key !== "mtc");
+  const [form, setForm] = useState<FormState>({ ...blank, committeeId: regularCommittees[0]?.id ?? committees[0]?.id ?? "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [formLanguage, setFormLanguage] = useState<"en" | "ar">("en");
+  const [filterCommittee, setFilterCommittee] = useState("");
+  const [filterPosition, setFilterPosition] = useState<"" | PositionLevel>("");
+  const [filterMtc, setFilterMtc] = useState<"" | "yes" | "no">("");
+
+  const groupNameFor = (committeeId: string, isMTC: boolean) => {
+    if (isMTC) return "MTC";
+    return committees.find((c) => c.id === committeeId)?.name ?? "Committee";
+  };
+  const autoTitle = (position: PositionLevel, committeeId: string, isMTC: boolean) => suggestTitle(position, groupNameFor(committeeId, isMTC), "en");
 
   function startEdit(member: ManagedTeamMember) {
     setEditingId(member.id);
     setForm({
-      name: member.name, title: member.title, titleAr: member.titleAr ?? "", committeeId: member.committeeId, bio: member.bio ?? "", bioAr: member.bioAr ?? "",
+      name: member.name, title: member.title, titleAr: member.titleAr ?? "", position: member.position ?? "LEADER", isMTC: !!member.isMTC || member.committee?.key === "mtc",
+      committeeId: member.committeeId ?? "", bio: member.bio ?? "", bioAr: member.bioAr ?? "",
       website: member.socialLinks?.website ?? "", linkedin: member.socialLinks?.linkedin ?? "",
       instagram: member.socialLinks?.instagram ?? "", photoUrl: member.photoUrl ?? "", visible: member.visible,
     });
@@ -52,13 +79,25 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
   }
 
   function resetForm() {
+    const defaultCommitteeId = regularCommittees[0]?.id ?? "";
     setEditingId(null);
-    setForm({ ...blank, committeeId: committees[0]?.id ?? "" });
+    setForm({ ...blank, committeeId: defaultCommitteeId, title: autoTitle("LEADER", defaultCommitteeId, false) });
     setPhoto(null);
   }
 
+  const filtered = useMemo(() => members.filter((m) => {
+    if (filterMtc === "yes" && !m.isMTC) return false;
+    if (filterMtc === "no" && m.isMTC) return false;
+    if (filterPosition && (m.position ?? "LEADER") !== filterPosition) return false;
+    if (filterCommittee && m.committeeId !== filterCommittee) return false;
+    return true;
+  }).sort(compareMembers), [members, filterCommittee, filterPosition, filterMtc]);
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const selectedCommittee = committees.find((c) => c.id === form.committeeId);
+    const effectiveIsMTC = form.isMTC || selectedCommittee?.key === "mtc";
+    if (!effectiveIsMTC && !form.committeeId) { setMessage(t("saveError")); return; }
     setBusy(true);
     setMessage("");
     try {
@@ -72,7 +111,8 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
         photoUrl = result.url;
       }
       const payload = {
-        name: form.name, title: form.title, titleAr: form.titleAr || null, committeeId: form.committeeId, bio: form.bio || null, bioAr: form.bioAr || null,
+        name: form.name, title: form.title, titleAr: form.titleAr || null, position: form.position, isMTC: effectiveIsMTC,
+        committeeId: form.committeeId || null, bio: form.bio || null, bioAr: form.bioAr || null,
         socialLinks: { website: form.website, linkedin: form.linkedin, instagram: form.instagram },
         photoUrl: photoUrl || null, visible: form.visible,
       };
@@ -84,8 +124,8 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not save this team member.");
       setMembers((current) => editingId
-        ? current.map((member) => member.id === editingId ? result.member : member).sort((a, b) => a.order - b.order)
-        : [...current, result.member].sort((a, b) => a.order - b.order));
+        ? current.map((member) => member.id === editingId ? result.member : member)
+        : [...current, result.member]);
       resetForm();
     } catch {
       const errorMessage = t("saveError");
@@ -109,17 +149,23 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
 
   async function changeOrder(fromId: string, toId: string) {
     if (fromId === toId) return;
-    const next = [...members];
-    const from = next.findIndex((entry) => entry.id === fromId);
-    const to = next.findIndex((entry) => entry.id === toId);
+    const fromMember = members.find((m) => m.id === fromId);
+    const toMember = members.find((m) => m.id === toId);
+    if (!fromMember || !toMember) return;
+    if (groupKey(fromMember) !== groupKey(toMember) || (fromMember.position ?? "LEADER") !== (toMember.position ?? "LEADER")) return;
+    const bucket = members.filter((m) => groupKey(m) === groupKey(fromMember) && (m.position ?? "LEADER") === (fromMember.position ?? "LEADER")).sort(compareMembers);
+    const from = bucket.findIndex((e) => e.id === fromId);
+    const to = bucket.findIndex((e) => e.id === toId);
     if (from < 0 || to < 0) return;
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
+    const [item] = bucket.splice(from, 1);
+    bucket.splice(to, 0, item);
+    const reordered = bucket.map((m, i) => ({ ...m, order: i }));
+    const next = members.map((m) => reordered.find((r) => r.id === m.id) ?? m);
     setMembers(next);
     const response = await fetch("/api/team", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: next.map((entry) => entry.id) }),
+      body: JSON.stringify({ order: reordered.map((entry) => entry.id) }),
     });
     if (!response.ok) {
       setMembers(members);
@@ -133,8 +179,13 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
         <div><p className="eyebrow">{t("controls")}</p><h2>{t("manage")}</h2></div>
         <button className="button button-primary" type="button" onClick={() => { resetForm(); setMessage(""); }}>{t("add")}</button>
       </div>
+      <div className="admin-form-grid team-admin-filters">
+        <label><span>{t("committee")}</span><CommitteeSelect committees={committees} includeMTC value={filterCommittee} onChange={(v) => setFilterCommittee(Array.isArray(v) ? "" : (v ?? ""))} mode="single" showAll allLabel={locale === "ar" ? "كل اللجان" : "All committees"} /></label>
+        <label><span>{t("position") ?? "Position"}</span><select value={filterPosition} onChange={(e) => setFilterPosition(e.target.value as "" | PositionLevel)}><option value="">{locale === "ar" ? "كل المناصب" : "All positions"}</option><option value="HEAD">{getPositionLabel("HEAD", locale)}</option><option value="VICE">{getPositionLabel("VICE", locale)}</option><option value="LEADER">{getPositionLabel("LEADER", locale)}</option></select></label>
+        <label><span>{t("mtcFilter") ?? "MTC"}</span><select value={filterMtc} onChange={(e) => setFilterMtc(e.target.value as "" | "yes" | "no")}><option value="">{locale === "ar" ? "الكل" : "All"}</option><option value="yes">{locale === "ar" ? "MTC فقط" : "MTC only"}</option><option value="no">{locale === "ar" ? "غير MTC" : "Non-MTC"}</option></select></label>
+      </div>
       <div className="team-admin-list">
-        {members.map((member) => (
+        {filtered.map((member) => (
           <div
             className={`team-admin-row${draggedId === member.id ? " is-dragged" : ""}`}
             key={member.id}
@@ -146,17 +197,15 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
           >
             <span className="drag-handle" aria-label={t("drag")} title={t("drag")}>⠿</span>
             <div className="team-admin-avatar">
-              {member.photoUrl ? <Image src={member.photoUrl} alt="" fill sizes="48px" /> : <span>{member.name.slice(0, 1).toUpperCase()}</span>}
+              {member.photoUrl ? <Image src={member.photoUrl} alt="" fill sizes="48px" unoptimized /> : <span>{member.name.slice(0, 1).toUpperCase()}</span>}
             </div>
-            <div className="team-admin-name"><strong>{member.name}</strong><span>{member.title} · {getCommitteeLabel(member.committee.name, locale)}</span></div>
+            <div className="team-admin-name"><strong>{member.name}</strong><span>{member.title} · {member.committee?.key === "mtc" || member.isMTC ? "MTC" : getCommitteeLabel(member.committee?.name, locale)} · {getPositionLabel(member.position ?? "LEADER", locale)}</span></div>
             <span className={`visibility-tag${member.visible ? "" : " is-hidden"}`}>{member.visible ? t("visible") : t("hidden")}</span>
-            <button type="button" className="button button-secondary order-button" aria-label={t("moveUp", { name: member.name })} disabled={members[0]?.id === member.id} onClick={() => void changeOrder(member.id, members[members.findIndex((entry) => entry.id === member.id) - 1]?.id ?? member.id)}>↑</button>
-            <button type="button" className="button button-secondary order-button" aria-label={t("moveDown", { name: member.name })} disabled={members[members.length - 1]?.id === member.id} onClick={() => void changeOrder(member.id, members[members.findIndex((entry) => entry.id === member.id) + 1]?.id ?? member.id)}>↓</button>
             <button type="button" className="button button-secondary" onClick={() => startEdit(member)}>{t("editButton")}</button>
             <button type="button" className="button button-secondary danger-button" onClick={() => void remove(member)}>{t("remove")}</button>
           </div>
         ))}
-        {!members.length && <p className="empty-note">{t("empty")}</p>}
+        {!filtered.length && <p className="empty-note">{t("empty")}</p>}
       </div>
 
       <form className="team-edit-form" onSubmit={save}>
@@ -167,15 +216,31 @@ export function TeamManager({ initialMembers, committees }: { initialMembers: Ma
         </div>
         <div className="admin-form-grid">
           <label>{t("name")}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required maxLength={100} /></label>
+          <label>{t("position") ?? "Position"}<select value={form.position} onChange={(e) => { const pos = e.target.value as PositionLevel; setForm((f) => ({ ...f, position: pos, title: f.title && f.title !== autoTitle(f.position, f.committeeId, f.isMTC) ? f.title : autoTitle(pos, f.committeeId, f.isMTC) })); }} required>
+            <option value="HEAD">{getPositionLabel("HEAD", locale)}</option>
+            <option value="VICE">{getPositionLabel("VICE", locale)}</option>
+            <option value="LEADER">{getPositionLabel("LEADER", locale)}</option>
+          </select></label>
+          <label className="visibility-control"><input type="checkbox" checked={form.isMTC} onChange={(e) => { const isMTC = e.target.checked; setForm((f) => ({ ...f, isMTC, title: f.title && f.title !== autoTitle(f.position, f.committeeId, f.isMTC) ? f.title : autoTitle(f.position, f.committeeId, isMTC) })); }} />{t("isMtc") ?? "Part of MTC / Club heads"}</label>
           {formLanguage === "en"
             ? <label>{t("titleEn")}<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder={t("titlePlaceholder")} required maxLength={100} /></label>
             : <label lang="ar">{t("titleAr")}<input value={form.titleAr} onChange={(event) => setForm({ ...form, titleAr: event.target.value })} dir="rtl" maxLength={100} /></label>}
           <label>{t("committee")}<CommitteeSelect
             committees={committees}
+            includeMTC
             value={form.committeeId}
-            onChange={(v) => setForm({ ...form, committeeId: Array.isArray(v) ? "" : (v || "") })}
+            onChange={(v) => {
+              const committeeId = Array.isArray(v) ? "" : (v || "");
+              const selected = committees.find((c) => c.id === committeeId);
+              const isMTCCommittee = selected?.key === "mtc";
+              setForm((f) => {
+                const nextIsMTC = isMTCCommittee ? true : f.isMTC;
+                const nextTitle = f.title && f.title !== autoTitle(f.position, f.committeeId, f.isMTC) ? f.title : autoTitle(f.position, committeeId, nextIsMTC || isMTCCommittee);
+                return { ...f, committeeId, isMTC: nextIsMTC, title: nextTitle };
+              });
+            }}
             mode="single"
-            required
+            required={!form.isMTC}
           /></label>
           <label>{t("photo")}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} /></label>
           {formLanguage === "en"
